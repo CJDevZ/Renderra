@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "package": "de.cjdev.renderra.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "MixinChunkMap",
+    "MixinTrackedEntity"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixins": [
+    "MixinFile"
+  ]
+}

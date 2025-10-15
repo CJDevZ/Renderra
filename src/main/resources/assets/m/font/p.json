@@ -1,0 +1,19 @@
+{
+    "providers": [
+        {
+            "type": "bitmap",
+            "file": "m:font/pixel.png",
+            "height": 10,
+            "ascent": 10,
+            "chars": [
+                "A"
+            ]
+        },
+        {
+            "type": "space",
+            "advances": {
+                ".": -1
+            }
+        }
+    ]
+}

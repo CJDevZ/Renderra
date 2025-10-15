@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "renderra",
+  "version": "${version}",
+  "name": "Renderra",
+  "description": "Video Playback Mod, which enables streaming and displaying videos directly within Minecraft, for both modded and Vanilla Clients.",
+  "authors": [],
+  "contact": {},
+  "license": "LGPL-3.0",
+  "icon": "assets/renderra/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "de.cjdev.renderra.Renderra"
+    ],
+    "client": [
+      "de.cjdev.renderra.client.VideoPlayerClient"
+    ]
+  },
+  "mixins": [
+    {
+      "environment": "*",
+      "config": "renderra.json"
+    },
+    {
+      "environment": "client",
+      "config": "renderra.client.mixins.json"
+    }
+  ],
+  "accessWidener": "renderra.accesswidener",
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": ">=1.21.5 <=${minecraft_version}",
+    "axiom": ">=${axiom_version}"
+  }
+}
