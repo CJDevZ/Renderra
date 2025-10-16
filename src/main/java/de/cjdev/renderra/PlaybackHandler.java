@@ -77,6 +77,7 @@ public class PlaybackHandler {
         SCREEN_META = screenMeta;
         VIDEO_META = VideoMetaData.None();
         volume = 1f;
+        replayMode = ReplayMode.NORMAL;
         /// /// /// /// /// ///
         ListTag POSITION = new ListTag();
         POSITION.addAll(0, List.of(FloatTag.valueOf(-0.007f), FloatTag.valueOf(-0.013f), FloatTag.valueOf(0)));
@@ -230,10 +231,13 @@ public class PlaybackHandler {
     }
 
     public void videoDone() {
+        LOGGER.warn("DONE");
         if (replayMode == ReplayMode.LOOP && GRAB != null) {
             try {
+                LOGGER.warn("LOOP");
                 GRAB.setTimestamp(0);
                 lastAudioChunk = -1;
+                return;
             } catch (FFmpegFrameGrabber.Exception ignored) {
             }
         }

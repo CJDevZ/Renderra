@@ -12,16 +12,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinMinecraft {
 
     @Unique
-    private long videoplayer$lastNanos = System.nanoTime();
+    private long renderra$lastNanos = System.nanoTime();
 
-    @Inject(method = "runTick", at = @At("RETURN"))
+    @Inject(method = "runTick", at = @At("HEAD"))
     private void injectRunTick(boolean bl, CallbackInfo ci) {
         var nanos = System.nanoTime();
-        double deltaSeconds = (nanos - videoplayer$lastNanos) / 1_000_000_000.0;
+        double deltaSeconds = (nanos - renderra$lastNanos) / 1_000_000_000.0;
 
         if (VideoPlayerClient.UPDATE != null)
             VideoPlayerClient.UPDATE.accept((Minecraft) (Object) this, deltaSeconds);
 
-        this.videoplayer$lastNanos = nanos;
+        this.renderra$lastNanos = nanos;
     }
 }

@@ -66,8 +66,8 @@ dependencies {
     implementation(include("org.bytedeco:ffmpeg-platform:7.1.1-1.5.12"))
 
     include 'org.bytedeco:ffmpeg:7.1.1-1.5.12:windows-x86_64@jar' // for Windows DLLs
-    //include 'org.bytedeco:ffmpeg:7.1.1-1.5.12:linux-x86_64@jar' // for Linux .so
-    //include 'org.bytedeco:ffmpeg:7.1.1-1.5.12:macosx-x86_64@jar' // for macOS dylib
+    include 'org.bytedeco:ffmpeg:7.1.1-1.5.12:linux-x86_64@jar' // for Linux .so
+    include 'org.bytedeco:ffmpeg:7.1.1-1.5.12:macosx-x86_64@jar' // for macOS dylib
 
     // JTransforms, for audio
     //implementation 'com.github.wendykierp:JTransforms:3.1'

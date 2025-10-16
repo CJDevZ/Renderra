@@ -8,6 +8,5 @@
   "injectors": {
     "defaultRequire": 1
   },
-  "mixins": [
-  ]
+  "refmap": "client-Renderra-refmap.json"
 }

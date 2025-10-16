@@ -20,7 +20,7 @@
   "mixins": [
     {
       "environment": "*",
-      "config": "renderra.json"
+      "config": "renderra.mixins.json"
     },
     {
       "environment": "client",

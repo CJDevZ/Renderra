@@ -1,10 +1,7 @@
 package de.cjdev.renderra.client.screen;
 
-import de.cjdev.renderra.Renderra;
-import de.cjdev.renderra.ReplayMode;
-import de.cjdev.renderra.VideoMetaData;
+import de.cjdev.renderra.*;
 import de.cjdev.renderra.client.VideoPlayerClient;
-import de.cjdev.renderra.VideoResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,13 +9,11 @@ import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.narration.NarratableEntry;
-import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Rotation;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -65,12 +60,15 @@ public class VideoPlayerScreen extends Screen {
         }).bounds(40, this.height - 40, 20, 20).build();
         this.addRenderableWidget(playButton);
 
-        this.addRenderableWidget(CycleButton.<ReplayMode>builder(o -> Component.literal("\uD83D\uDD01").withColor(o.buttonColor))
+        var cycleLoopBtn = CycleButton.<ReplayMode>builder(o -> null)
                 .withValues(ReplayMode.values())
-                .withInitialValue(ReplayMode.NORMAL)
-                .create(70, this.height - 40, 20, 20, Component.literal(""), (cycleButton, object) -> {
+                .withInitialValue(this.videoPlayer.PLAYBACK.replayMode)
+                .create(70, this.height - 40, 20, 20, null, (cycleButton, object) -> {
                     this.videoPlayer.PLAYBACK.replayMode = object;
-                }));
+                    cycleButton.setMessage(Component.literal("\uD83D\uDD01").withColor(object.buttonColor));
+                });
+        this.addRenderableWidget(cycleLoopBtn);
+        cycleLoopBtn.setMessage(Component.literal("\uD83D\uDD01").withColor(this.videoPlayer.PLAYBACK.replayMode.buttonColor));
 
         this.addRenderableWidget(new VideoSelectionDropDown(this.minecraft, 240, 100, 20, 20, 100));
 
@@ -81,11 +79,6 @@ public class VideoPlayerScreen extends Screen {
                     this.videoPlayer.PLAYBACK.videoName = value;
                     playButton.setMessage(getPlayButtonText());
                 }));
-
-        Button brightButton = Button.builder(Component.literal("BRIGHTT!!!"), button1 -> {
-
-        }).bounds(40, 100, 110, 20).build();
-        this.addRenderableWidget(brightButton);
 
         CycleButton<VideoPlayerClient.OperationMode> opButton = CycleButton.<VideoPlayerClient.OperationMode>builder(o -> Component.literal(o.name()))
                 .withValues(VideoPlayerClient.OperationMode.values())
@@ -134,16 +127,16 @@ public class VideoPlayerScreen extends Screen {
 
         VideoMetaData videoMetaData = this.videoPlayer.PLAYBACK.VIDEO_META;
         this.addRenderableWidget(new TimestampSliderButton(100, this.height - 40, 300, 20, this.videoPlayer.getTimestampComponent(), videoMetaData == null ? 0 : ((double) this.videoPlayer.PLAYBACK.getTimestamp() / 1_000_000L) / ((double) videoMetaData.secondsLength()), this));
-        this.addRenderableWidget(new VolumeSliderButton(160, this.height - 40 - 90, 115, 20, Component.literal("Volume: " + this.videoPlayer.PLAYBACK.volume), this.videoPlayer.PLAYBACK.volume / 2, this));
+        this.addRenderableWidget(new VolumeSliderButton(160, this.height - 40 - 90, 115, 20, Component.literal("Volume: " + this.videoPlayer.PLAYBACK.volume), this.videoPlayer.PLAYBACK.volume / 2, this.videoPlayer.PLAYBACK));
     }
 
     public static class VolumeSliderButton extends AbstractSliderButton {
 
-        private final VideoPlayerScreen videoPlayer;
+        private final PlaybackHandler PLAYBACK;
 
-        public VolumeSliderButton(int i, int j, int k, int l, Component component, double d, VideoPlayerScreen videoPlayer) {
+        public VolumeSliderButton(int i, int j, int k, int l, Component component, double d, PlaybackHandler PLAYBACK) {
             super(i, j, k, l, component, d);
-            this.videoPlayer = videoPlayer;
+            this.PLAYBACK = PLAYBACK;
         }
 
         @Override
@@ -153,7 +146,7 @@ public class VideoPlayerScreen extends Screen {
 
         @Override
         protected void applyValue() {
-            videoPlayer.videoPlayer.PLAYBACK.volume = (float) Math.floor(this.value * 20) / 10;
+            PLAYBACK.volume = (float) Math.floor(this.value * 20) / 10;
         }
     }
 
