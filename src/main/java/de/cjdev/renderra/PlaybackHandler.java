@@ -65,6 +65,7 @@ public class PlaybackHandler {
     public boolean playing;
     public float volume;
     public ReplayMode replayMode;
+    public ColorMode colorMode;
 
     public Level level;
     protected static Vec3 pos;
@@ -78,6 +79,7 @@ public class PlaybackHandler {
         VIDEO_META = VideoMetaData.None();
         volume = 1f;
         replayMode = ReplayMode.NORMAL;
+        colorMode = ColorMode.FIFTEEN_BIT;
         /// /// /// /// /// ///
         ListTag POSITION = new ListTag();
         POSITION.addAll(0, List.of(FloatTag.valueOf(-0.007f), FloatTag.valueOf(-0.013f), FloatTag.valueOf(0)));
@@ -428,36 +430,55 @@ public class PlaybackHandler {
         final boolean noSaving = this.SCREEN_META.pretty();
         ListTag listTag = new ListTag();
         StringBuilder curString = new StringBuilder();
-        int lastColor = -1;
-        for (int y = heightOffset; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                int rgb = image.getRGB(x, y) & 0xFFFFFF;
+        boolean fifteen_bit = colorMode == ColorMode.FIFTEEN_BIT;
+        int fifteen_bit_colors = 30;
+        if (fifteen_bit) {
+            for (int y = heightOffset; y < height; ++y) {
+                for (int x = 0; x < width; ++x) {
+                    boolean endX = x == width - 1;
+                    int rgb = image.getRGB(x, y) & 0xFFFFFF;
 
-                if (lastColor == -1) {
-                    // First pixel
-                    lastColor = rgb;
-                }
-
-                boolean endX = x == width - 1;
-
-                if (rgb == lastColor) {
-                    curString.append("A");
+                    int red = Math.round(((rgb >> 16) & 0xFF) / 255f * (fifteen_bit_colors - 1));
+                    int green = Math.round(((rgb >> 8) & 0xFF) / 255f * (fifteen_bit_colors - 1));
+                    int blue = Math.round((rgb & 0xFF) / 255f * (fifteen_bit_colors - 1));
+                    curString.append((char) (blue * fifteen_bit_colors * fifteen_bit_colors + green * fifteen_bit_colors + red + 12832));
                     if (noSaving && !endX) curString.append('.');
-                } else {
-                    // Color changed — save current segment
-                    sectionToCompound(listTag, curString.toString(), lastColor);
-
-                    curString.setLength(0); // Clear builder
-                    curString.append("A");
-                    if (noSaving && !endX) curString.append('.');
-                    lastColor = rgb;
                 }
             }
-        }
 
-        // Add last segment if not empty
-        if (!curString.isEmpty()) {
-            sectionToCompound(listTag, curString.toString(), lastColor);
+            sectionToCompound(listTag, curString.toString(), -1);
+        } else {
+            int lastColor = -1;
+            for (int y = heightOffset; y < height; ++y) {
+                for (int x = 0; x < width; ++x) {
+                    int rgb = image.getRGB(x, y) & 0xFFFFFF;
+
+                    if (lastColor == -1) {
+                        // First pixel
+                        lastColor = rgb;
+                    }
+
+                    boolean endX = x == width - 1;
+
+                    if (rgb == lastColor) {
+                        curString.append("A");
+                        if (noSaving && !endX) curString.append('.');
+                    } else {
+                        // Color changed — save current segment
+                        sectionToCompound(listTag, curString.toString(), lastColor);
+
+                        curString.setLength(0); // Clear builder
+                        curString.append("A");
+                        if (noSaving && !endX) curString.append('.');
+                        lastColor = rgb;
+                    }
+                }
+            }
+
+            // Add last segment if not empty
+            if (!curString.isEmpty()) {
+                sectionToCompound(listTag, curString.toString(), lastColor);
+            }
         }
 
         CompoundTag screenCompound = new CompoundTag();
@@ -470,13 +491,18 @@ public class PlaybackHandler {
 
     private static void sectionToCompound(ListTag listTag, String pixels, int lastColor) {
         final int CHUNK_SIZE = Short.MAX_VALUE;
-        CompoundTag textCompound = new CompoundTag();
 
         int totalLength = pixels.length();
 
-        textCompound.putString("text", pixels.substring(0, Math.min(CHUNK_SIZE, totalLength)));
-        textCompound.putString("color", String.format(Locale.ROOT, "#%06X", lastColor));
-        listTag.add(textCompound);
+        String firstChunk = pixels.substring(0, Math.min(CHUNK_SIZE, totalLength));
+        if (lastColor == -1) {
+            listTag.add(StringTag.valueOf(firstChunk));
+        } else {
+            CompoundTag textCompound = new CompoundTag();
+            textCompound.putString("text", firstChunk);
+            textCompound.putString("color", String.format(Locale.ROOT, "#%06X", lastColor));
+            listTag.add(textCompound);
+        }
 
         // Write the rest in chunks
         int numChunks = (totalLength + CHUNK_SIZE - 1) / CHUNK_SIZE;
@@ -528,14 +554,14 @@ public class PlaybackHandler {
         int sectionHeight = Math.round(((float) height) / (screenCount));
         int pixelHeight = height - sectionHeight * (screenCount - 1);
         ClientboundCustomPayloadPacket[] packets = new ClientboundCustomPayloadPacket[screenCount];
-        packets[0] = new ClientboundCustomPayloadPacket(new FastFrameManipulate(SCREEN_META.getMainScreen().getId(), SCREEN_META.pretty(), width, height, height - pixelHeight, bufferedImage));
+        packets[0] = new ClientboundCustomPayloadPacket(new FastFrameManipulate(SCREEN_META.getMainScreen().getId(), this.colorMode, SCREEN_META.pretty(), width, height, height - pixelHeight, bufferedImage));
 
         Integer[] ids = SCREEN_META.getScreenIDs();
         int length = ids.length;
         while (--length > 0) {
             int screen = ids[length];
             int curHeight = (screenCount - length - 1) * sectionHeight;
-            packets[length] = new ClientboundCustomPayloadPacket(new FastFrameManipulate(screen, SCREEN_META.pretty(), width, curHeight + sectionHeight, curHeight, bufferedImage));
+            packets[length] = new ClientboundCustomPayloadPacket(new FastFrameManipulate(screen, this.colorMode, SCREEN_META.pretty(), width, curHeight + sectionHeight, curHeight, bufferedImage));
         }
 
         Display.TextDisplay mainScreen = SCREEN_META.getMainScreen();

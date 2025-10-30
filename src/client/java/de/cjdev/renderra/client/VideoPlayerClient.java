@@ -61,9 +61,11 @@ public class VideoPlayerClient implements ClientModInitializer {
     public OperationMode operationMode = OperationMode.NONE;
     private Display lastSelectedDisplay;
     public final ClientPlaybackHandler PLAYBACK;
+    //private final Robot ROBOT;
 
-    public VideoPlayerClient() {
+    public VideoPlayerClient()/* throws AWTException*/ {
         PLAYBACK = new ClientPlaybackHandler();
+        //ROBOT = new Robot();
     }
 
     public enum OperationMode {
@@ -191,9 +193,21 @@ public class VideoPlayerClient implements ClientModInitializer {
 
     public List<String> getVideoNames() {
         String[] fileNames = VIDEOS_FOLDER.list((dir, name) -> VIDEO_FILTER.test(name));
-        if (fileNames == null) return List.of("None");
+        List<String> defaults = new ArrayList<>();
+        defaults.add("None");
+        //try {
+        //    Toolkit.getDefaultToolkit().getScre
+        //    new Robot().createScreenCapture(new Rectangle(Toolkit.getDefaultToolkit().getScreenSize()));
+        //} catch (AWTException e) {
+        //    throw new RuntimeException(e);
+        //}
+        if (fileNames == null) {
+            return defaults;
+        }
         List<String> videoNames = Arrays.stream(fileNames).collect(Collectors.toList());
-        videoNames.addFirst("None");
+        for (int i = defaults.size() - 1; i == 0; i--) {
+            videoNames.addFirst(defaults.get(i));
+        }
         return videoNames;
     }
 

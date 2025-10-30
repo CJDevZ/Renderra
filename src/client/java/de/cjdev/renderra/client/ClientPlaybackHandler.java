@@ -45,7 +45,7 @@ public class ClientPlaybackHandler extends PlaybackHandler {
     protected void playSound(Entity atEntity, SoundEvent soundEvent, SoundSource source, float volume, float pitch) {
         if (Minecraft.getInstance().player == null) return;
         Vec3 position = atEntity.position();
-        Minecraft.getInstance().player.connection.sendCommand("playsound " + soundEvent.location() + " " + source.getName() + " @a " + position.x + " " + position.y + " " + position.z + " " + volume + " " + pitch + " " + soundEvent.fixedRange().orElse(0f));
+        Minecraft.getInstance().player.connection.sendCommand("playsound " + soundEvent.location() + "   " + source.getName() + " @a " + position.x + " " + position.y + " " + position.z + " " + volume + " " + pitch + " " + soundEvent.fixedRange().orElse(0f));
     }
 
     public void deltaTick(Minecraft minecraft, double deltaTime) {
@@ -114,14 +114,14 @@ public class ClientPlaybackHandler extends PlaybackHandler {
 
         int sectionHeight = Math.round(((float) height) / (screenCount));
         int pixelHeight = height - sectionHeight * (screenCount - 1);
-        ClientPlayNetworking.send(new FastFrameManipulate(SCREEN_META.getMainScreen().getId(), SCREEN_META.pretty(), width, height, height - pixelHeight, bufferedImage));
+        ClientPlayNetworking.send(new FastFrameManipulate(SCREEN_META.getMainScreen().getId(), this.colorMode, SCREEN_META.pretty(), width, height, height - pixelHeight, bufferedImage));
 
         Integer[] ids = SCREEN_META.getScreenIDs();
         int length = ids.length;
         while (--length > 0) {
             int screen = ids[length];
             int curHeight = (screenCount - length - 1) * sectionHeight;
-            ClientPlayNetworking.send(new FastFrameManipulate(screen, SCREEN_META.pretty(), width, curHeight + sectionHeight, curHeight, bufferedImage));
+            ClientPlayNetworking.send(new FastFrameManipulate(screen, this.colorMode, SCREEN_META.pretty(), width, curHeight + sectionHeight, curHeight, bufferedImage));
         }
     }
 }

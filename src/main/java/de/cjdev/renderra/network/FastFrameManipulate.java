@@ -1,5 +1,6 @@
 package de.cjdev.renderra.network;
 
+import de.cjdev.renderra.ColorMode;
 import de.cjdev.renderra.mixin.MixinChunkMap;
 import de.cjdev.renderra.mixin.MixinTrackedEntity;
 import io.netty.buffer.Unpooled;
@@ -35,6 +36,7 @@ public class FastFrameManipulate implements CustomPacketPayload {
     }
 
     private final int entityID;
+    private final ColorMode colorMode;
     private final Object bufferedImage;
     private final int width;
     private final int height;
@@ -51,8 +53,9 @@ public class FastFrameManipulate implements CustomPacketPayload {
         return (T)bufferedImage;
     }
 
-    public FastFrameManipulate(int entityID, boolean pretty, ImageIterable imageIterable) {
+    public FastFrameManipulate(int entityID, ColorMode colorMode, boolean pretty, ImageIterable imageIterable) {
         this.entityID = entityID;
+        this.colorMode = colorMode;
         this.bufferedImage = imageIterable;
         this.width = 0;
         this.height = 0;
@@ -60,8 +63,9 @@ public class FastFrameManipulate implements CustomPacketPayload {
         this.pretty = pretty;
     }
 
-    public FastFrameManipulate(int entityID, boolean pretty, int width, int height, int heightOffset, BufferedImage bufferedImage) {
+    public FastFrameManipulate(int entityID, ColorMode colorMode, boolean pretty, int width, int height, int heightOffset, BufferedImage bufferedImage) {
         this.entityID = entityID;
+        this.colorMode = colorMode;
         this.width = width;
         this.height = height;
         this.heightOffset = heightOffset;
@@ -78,6 +82,7 @@ public class FastFrameManipulate implements CustomPacketPayload {
         // Build packet
         //bufferedPacket = new FriendlyByteBuf(Unpooled.buffer());
         byteBuf.writeVarInt(this.entityID);
+        byteBuf.writeEnum(this.colorMode);
         byteBuf.writeBoolean(this.pretty);
         if (this.bufferedImage instanceof ImageIterable imageIterable) {
             int[] palette = imageIterable.palette();
@@ -90,14 +95,14 @@ public class FastFrameManipulate implements CustomPacketPayload {
                 byteBuf.writeVarInt(section.colorIndex());
             }
         } else {
-            writeImageTiny(byteBuf, (BufferedImage) this.bufferedImage, this.width, this.height, this.heightOffset);
+            writeImageTiny(this.colorMode, byteBuf, (BufferedImage) this.bufferedImage, this.width, this.height, this.heightOffset);
         }
 
         // Cache the built packet
         //byteBuf.writeBytes(this.bufferedPacket.copy());
     }
 
-    public static void writeImageTiny(FriendlyByteBuf byteBuf, BufferedImage image, int width, int height, int heightOffset) {
+    public static void writeImageTiny(ColorMode colorMode, FriendlyByteBuf byteBuf, BufferedImage image, int width, int height, int heightOffset) {
         int lastColor = -1;
         int consecutivePixels = 0;
         //long maxPixelCount = (long) width * height;
@@ -112,8 +117,19 @@ public class FastFrameManipulate implements CustomPacketPayload {
             }
         }
         byteBuf.writeVarInt(paletteIndex);
-        for (Integer value : palette.keySet()) {
-            byteBuf.writeVarInt(value);
+        if (colorMode == ColorMode.FIFTEEN_BIT) {
+            for (Integer value : palette.keySet()) {
+                int COLORS = 30;
+                int red   = Math.round(((value >> 16) & 0xFF) / 255f * (COLORS - 1));
+                int green = Math.round(((value >> 8)  & 0xFF) / 255f * (COLORS - 1));
+                int blue  = Math.round(( value        & 0xFF) / 255f * (COLORS - 1));
+                int encodedIndex = red + green * COLORS + blue * COLORS * COLORS;
+                byteBuf.writeVarInt(encodedIndex);
+            }
+        } else {
+            for (Integer value : palette.keySet()) {
+                byteBuf.writeVarInt(value);
+            }
         }
 
         FriendlyByteBuf pixelsBuf = new FriendlyByteBuf(Unpooled.buffer());
@@ -150,14 +166,16 @@ public class FastFrameManipulate implements CustomPacketPayload {
 
     public static FastFrameManipulate decode(FriendlyByteBuf byteBuf) {
         int entityID = byteBuf.readVarInt();
+        ColorMode colorMode1 = byteBuf.readEnum(ColorMode.class);
         boolean pretty = byteBuf.readBoolean();
-        return new FastFrameManipulate(entityID, pretty, ImageIterable.read(byteBuf, pretty));
+        return new FastFrameManipulate(entityID, colorMode1, pretty, ImageIterable.read(byteBuf, colorMode1, pretty));
     }
 
     public static FastFrameManipulate decodeForClient(FriendlyByteBuf byteBuf) {
         int entityID = byteBuf.readVarInt();
+        ColorMode colorMode1 = byteBuf.readEnum(ColorMode.class);
         boolean pretty = byteBuf.readBoolean();
-        return new FastFrameManipulate(entityID, pretty, ImageIterable.read(byteBuf, pretty, true));
+        return new FastFrameManipulate(entityID, colorMode1, pretty, ImageIterable.read(byteBuf, colorMode1, pretty, true));
     }
 
     public void handle(MinecraftServer server, ServerPlayer player) {

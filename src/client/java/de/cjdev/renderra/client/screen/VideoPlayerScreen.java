@@ -70,6 +70,12 @@ public class VideoPlayerScreen extends Screen {
         this.addRenderableWidget(cycleLoopBtn);
         cycleLoopBtn.setMessage(Component.literal("\uD83D\uDD01").withColor(this.videoPlayer.PLAYBACK.replayMode.buttonColor));
 
+        this.addRenderableWidget(CycleButton.<ColorMode>builder(o -> Component.literal(o.name()))
+                .withValues(ColorMode.values())
+                .withInitialValue(this.videoPlayer.PLAYBACK.colorMode)
+                .create(160, this.height - 40 - 30 * 4, 115, 20, Component.literal("Color"), (cycleButton, object) ->
+                        this.videoPlayer.PLAYBACK.colorMode = object));
+
         this.addRenderableWidget(new VideoSelectionDropDown(this.minecraft, 240, 100, 20, 20, 100));
 
         this.addRenderableWidget(CycleButton.builder(Component::literal)

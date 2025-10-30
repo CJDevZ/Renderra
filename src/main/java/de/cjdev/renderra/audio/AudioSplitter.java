@@ -34,6 +34,7 @@ public class AudioSplitter {
 
         FFmpegFrameRecorder recorder = null;
         try {
+            grabber.setTimestamp(0);
             while ((frame = grabber.grabSamples()) != null) {
                 if (frame.samples != null) {
                     long timestamp = grabber.getTimestamp();
