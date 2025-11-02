@@ -45,7 +45,7 @@ public class ClientPlaybackHandler extends PlaybackHandler {
     protected void playSound(Entity atEntity, SoundEvent soundEvent, SoundSource source, float volume, float pitch) {
         if (Minecraft.getInstance().player == null) return;
         Vec3 position = atEntity.position();
-        Minecraft.getInstance().player.connection.sendCommand("playsound " + soundEvent.location() + "   " + source.getName() + " @a " + position.x + " " + position.y + " " + position.z + " " + volume + " " + pitch + " " + soundEvent.fixedRange().orElse(0f));
+        Minecraft.getInstance().player.connection.sendCommand("playsound " + soundEvent.location() + " " + source.getName() + " @a " + position.x + " " + position.y + " " + position.z + " " + volume + " " + pitch + " " + soundEvent.fixedRange().orElse(0f));
     }
 
     public void deltaTick(Minecraft minecraft, double deltaTime) {
