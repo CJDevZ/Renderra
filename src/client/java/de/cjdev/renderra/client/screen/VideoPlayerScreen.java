@@ -10,6 +10,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Rotation;
 import org.jetbrains.annotations.NotNull;
@@ -159,7 +160,7 @@ public class VideoPlayerScreen extends Screen {
     public static class VideoSelectionDropDown extends ContainerObjectSelectionList<VideoSelectionDropDown.Entry> {
 
         public VideoSelectionDropDown(Minecraft minecraft, int width, int height, int y, int itemHeight, int a) {
-            super(minecraft, width, height, y, itemHeight, a);
+            super(minecraft, width, height, y, itemHeight/*, a*/);
             this.addEntry(new Entry(minecraft.font, "Test"));
         }
 
@@ -172,10 +173,10 @@ public class VideoPlayerScreen extends Screen {
                 this.value = value;
             }
 
-            @Override
-            public void render(GuiGraphics guiGraphics, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-                guiGraphics.drawString(this.font, value, x + 4, y + 6, 0xFFFFFF, false);
-            }
+            //@Override
+            //public void render(GuiGraphics guiGraphics, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float tickDelta) {
+            //    guiGraphics.drawString(this.font, value, x + 4, y + 6, 0xFFFFFF, false);
+            //}
 
             @Override
             public @NotNull List<? extends NarratableEntry> narratables() {
@@ -185,6 +186,11 @@ public class VideoPlayerScreen extends Screen {
             @Override
             public @NotNull List<? extends GuiEventListener> children() {
                 return List.of();
+            }
+
+            @Override
+            public void renderContent(GuiGraphics guiGraphics, int y, int x, boolean hovered, float tickDelta) {
+                guiGraphics.drawString(this.font, value, x + 4, y + 6, 0xFFFFFF, false);
             }
         }
     }
@@ -209,27 +215,27 @@ public class VideoPlayerScreen extends Screen {
         }
 
         @Override
-        protected void onDrag(double d, double e, double f, double g) {
+        protected void onDrag(MouseButtonEvent mouseButtonEvent, double d, double e) {
             if (this.videoPlayer.wasPlaying == null) {
                 this.videoPlayer.wasPlaying = this.videoPlayer.videoPlayer.PLAYBACK.playing;
                 this.videoPlayer.videoPlayer.PLAYBACK.playing = false;
             }
-            super.onDrag(d, e, f, g);
+            super.onDrag(mouseButtonEvent, d, e);
         }
 
         @Override
-        public void onRelease(double d, double e) {
+        public void onRelease(MouseButtonEvent mouseButtonEvent) {
             applyTime();
             if (videoPlayer.wasPlaying != null) {
                 this.videoPlayer.videoPlayer.PLAYBACK.playing = videoPlayer.wasPlaying;
             }
-            super.onRelease(d, e);
+            super.onRelease(mouseButtonEvent);
         }
 
         @Override
-        public void onClick(double d, double e) {
+        public void onClick(MouseButtonEvent mouseButtonEvent, boolean bl) {
             applyTime();
-            super.onClick(d, e);
+            super.onClick(mouseButtonEvent, bl);
         }
 
         public void applyTime() {

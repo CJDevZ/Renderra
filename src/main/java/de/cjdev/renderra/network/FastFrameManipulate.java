@@ -1,8 +1,7 @@
 package de.cjdev.renderra.network;
 
 import de.cjdev.renderra.ColorMode;
-import de.cjdev.renderra.mixin.MixinChunkMap;
-import de.cjdev.renderra.mixin.MixinTrackedEntity;
+import de.cjdev.renderra.Renderra;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -16,13 +15,13 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.world.entity.Display;
 
 import java.awt.image.BufferedImage;
 import java.util.*;
+
+import static de.cjdev.renderra.Renderra.FONT;
 
 @MethodsReturnNonnullByDefault
 public class FastFrameManipulate implements CustomPacketPayload {
@@ -187,19 +186,12 @@ public class FastFrameManipulate implements CustomPacketPayload {
 
     public void sendBackDisplay(Display.TextDisplay textDisplay) {
         Component text = Component.literal("").withStyle(style ->
-                style.withFont(ResourceLocation.fromNamespaceAndPath("m", "p")));
+                style.withFont(FONT));
         text.getSiblings().addAll(((ImageIterable) this.bufferedImage).sections());
         var vanillaPacket = new ClientboundSetEntityDataPacket(textDisplay.getId(), List.of(new SynchedEntityData.DataValue<>(23, EntityDataSerializers.COMPONENT, text)));
-        var moddedPacket = new ClientboundCustomPayloadPacket(this);
+        var renderraPacket = new ClientboundCustomPayloadPacket(this);
 
-        for (ServerPlayerConnection connection : ((MixinTrackedEntity) ((MixinChunkMap) ((ServerChunkCache) textDisplay.level().getChunkSource()).chunkMap).getEntityMap().get(textDisplay.getId())).getSeenBy()) {
-            ServerPlayer serverPlayer = connection.getPlayer();
-            if (ServerPlayNetworking.canSend(serverPlayer, PACKET_TYPE)) {
-                connection.send(moddedPacket);
-            } else {
-                connection.send(vanillaPacket);
-            }
-        }
+        Renderra.sendPacketToAllNear(textDisplay, renderraPacket, vanillaPacket);
     }
 
     public static void register() {

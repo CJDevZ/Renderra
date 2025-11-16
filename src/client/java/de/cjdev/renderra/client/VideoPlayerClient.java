@@ -49,11 +49,12 @@ import static de.cjdev.renderra.Renderra.*;
 /// TESTING RESOLUTION: 128x72 // Currently: 108x54
 public class VideoPlayerClient implements ClientModInitializer {
 
+    public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(ResourceLocation.fromNamespaceAndPath("renderra", "keybinds"));
     public static final KeyMapping OPEN_VIDEO_PLAYER = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.renderra.open",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_B,
-            "category.renderra.keybinds"
+            CATEGORY
     ));
 
     //private static final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -100,7 +101,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     public void handleFastFrameManipulate(FastFrameManipulate packet, LocalPlayer player) {
         if (player.level().getEntity(packet.getEntityID()) instanceof Display.TextDisplay textDisplay) {
             Component text = Component.literal("").withStyle(style ->
-                    style.withFont(ResourceLocation.fromNamespaceAndPath("m", "p")));
+                    style.withFont(FONT));
             text.getSiblings().addAll(((ImageIterable) packet.getBufferedImage()).sections());
             textDisplay.setText(text);
         }

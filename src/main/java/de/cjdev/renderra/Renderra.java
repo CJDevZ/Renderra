@@ -5,11 +5,13 @@ import de.cjdev.renderra.mixin.MixinChunkMap;
 import de.cjdev.renderra.mixin.MixinTrackedEntity;
 import de.cjdev.renderra.network.FastFrameManipulate;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
 import org.bytedeco.javacv.Java2DFrameConverter;
 import org.slf4j.Logger;
 
@@ -19,6 +21,7 @@ import java.util.function.Predicate;
 public class Renderra implements ModInitializer {
 
     public static final Logger LOGGER = LogUtils.getLogger();
+    public static final FontDescription.Resource FONT = new FontDescription.Resource(ResourceLocation.fromNamespaceAndPath("m", "p"));
 
     public static final int COMPOUND_OFFLOAD_SIZE;
     public static final int COMPOUND_PIXEL_SIZE;
@@ -40,14 +43,13 @@ public class Renderra implements ModInitializer {
         FastFrameManipulate.register();
     }
 
-    //public static void sendPacketToAllNear(Level level, UUID entity, Packet<?> packet) {
-    //    Entity entity1 = level.getEntity(entity);
-    //    sendPacketToAllNear(level, entity1, packet);
-    //}
-
-    public static void sendPacketToAllNear(Level level, Entity entity, Packet<?> packet) {
-        for (ServerPlayerConnection connection : ((MixinTrackedEntity) ((MixinChunkMap) ((ServerChunkCache) level.getChunkSource()).chunkMap).getEntityMap().get(entity.getId())).getSeenBy()) {
-            connection.send(packet);
+    public static void sendPacketToAllNear(Entity entity, Packet<?> renderraPacket, Packet<?> vanillaPacket) {
+        for (ServerPlayerConnection connection : ((MixinTrackedEntity) ((MixinChunkMap) ((ServerChunkCache) entity.level().getChunkSource()).chunkMap).getEntityMap().get(entity.getId())).getSeenBy()) {
+            if (ServerPlayNetworking.canSend(connection.getPlayer(), renderraPacket.type().id())) {
+                connection.send(renderraPacket);
+            } else {
+                connection.send(vanillaPacket);
+            }
         }
     }
 

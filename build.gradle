@@ -14,7 +14,7 @@ loom {
     splitEnvironmentSourceSets()
 
     mods {
-        "minescript_axiom" {
+        "renderra" {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
         }
@@ -48,9 +48,9 @@ dependencies {
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:$fabric_version"
 
-    modCompileOnlyApi("maven.modrinth:axiom:CRjwbqnJ") {
+    modCompileOnlyApi("maven.modrinth:axiom:TibxxJrx") {
         artifact {
-            url = uri("https://cdn.modrinth.com/data/N6n5dqoA/versions/CRjwbqnJ/Axiom-$axiom_version-for-MC1.21.6.jar")
+            url = uri("https://cdn.modrinth.com/data/N6n5dqoA/versions/TibxxJrx/Axiom-$axiom_version-for-MC1.21.10.jar")
         }
     }
 
