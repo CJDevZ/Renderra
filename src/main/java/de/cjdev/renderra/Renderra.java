@@ -8,6 +8,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.network.ServerPlayerConnection;
@@ -43,10 +44,10 @@ public class Renderra implements ModInitializer {
         FastFrameManipulate.register();
     }
 
-    public static void sendPacketToAllNear(Entity entity, Packet<?> renderraPacket, Packet<?> vanillaPacket) {
+    public static void sendPacketToAllNear(Entity entity, CustomPacketPayload.Type<?> customPayloadType, Packet<?> moddedPacket, Packet<?> vanillaPacket) {
         for (ServerPlayerConnection connection : ((MixinTrackedEntity) ((MixinChunkMap) ((ServerChunkCache) entity.level().getChunkSource()).chunkMap).getEntityMap().get(entity.getId())).getSeenBy()) {
-            if (ServerPlayNetworking.canSend(connection.getPlayer(), renderraPacket.type().id())) {
-                connection.send(renderraPacket);
+            if (ServerPlayNetworking.canSend(connection.getPlayer(), customPayloadType)) {
+                connection.send(moddedPacket);
             } else {
                 connection.send(vanillaPacket);
             }

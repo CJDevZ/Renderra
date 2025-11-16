@@ -191,7 +191,7 @@ public class FastFrameManipulate implements CustomPacketPayload {
         var vanillaPacket = new ClientboundSetEntityDataPacket(textDisplay.getId(), List.of(new SynchedEntityData.DataValue<>(23, EntityDataSerializers.COMPONENT, text)));
         var renderraPacket = new ClientboundCustomPayloadPacket(this);
 
-        Renderra.sendPacketToAllNear(textDisplay, renderraPacket, vanillaPacket);
+        Renderra.sendPacketToAllNear(textDisplay, PACKET_TYPE, renderraPacket, vanillaPacket);
     }
 
     public static void register() {
