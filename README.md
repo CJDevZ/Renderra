@@ -13,6 +13,10 @@
 - Select the desired **resolution**.
 - Generate the **audio track** for the selected video, which will be saved in the `videoaudio` folder.
 
+### Commands
+`/vidplay scale <scale>` for setting the screen's scale\
+`/vidplay subtitles/subtitleScreen <.srt file/uuid>` for subtitle settings
+
 ## 🔊 Audio Streaming
 1. Download [`ResourcePack.zip`](https://github.com/CJDevZ/Renderra/releases/tag/ResourcePack).
 2. Move the generated audio files into the `assets/renderra/sounds` folder within.

@@ -28,7 +28,7 @@ public class Renderra implements ModInitializer {
     public static final int COMPOUND_PIXEL_SIZE;
 
     public static final File VIDEOS_FOLDER = new File("videoplayer");
-    public static final String[] endings = {".mp4", ".mkv", ".mov", ".avi", ".flv", ".webm", ".ts", ".m2ts", ".ogv", ".wmv", ".gif"};
+    public static final String[] endings = {".mp4", ".mkv", ".mov", ".avi", ".flv", ".webm", ".ts", ".m2ts", ".ogv", ".wmv", ".gif", ".png", ".jpeg"};
     public static final Predicate<String> VIDEO_FILTER = name -> {
         for (String ending : Renderra.endings) {
             if (name.endsWith(ending)) return true;
