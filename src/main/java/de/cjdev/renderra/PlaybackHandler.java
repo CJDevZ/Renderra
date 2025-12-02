@@ -66,6 +66,7 @@ public class PlaybackHandler {
     public float volume;
     public ReplayMode replayMode;
     public ColorMode colorMode;
+    public ResourceLocation audioResource;
 
     public Level level;
     protected static Vec3 pos;
@@ -80,6 +81,7 @@ public class PlaybackHandler {
         volume = 1f;
         replayMode = ReplayMode.NORMAL;
         colorMode = ColorMode.FIFTEEN_BIT;
+        audioResource = ResourceLocation.parse("renderra:part");
         /// /// /// /// /// ///
         ListTag POSITION = new ListTag();
         POSITION.addAll(0, List.of(FloatTag.valueOf(-0.007f), FloatTag.valueOf(-0.013f), FloatTag.valueOf(0)));
@@ -176,7 +178,7 @@ public class PlaybackHandler {
 
         Display.TextDisplay screen = SCREEN_META.getMainScreen();
         if (volume != 0F) {
-            playSound(screen, SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath("renderra", "part" + String.format("%05x", chunk))), SoundSource.RECORDS, volume, 1f);
+            playSound(screen, SoundEvent.createVariableRangeEvent(audioResource.withSuffix(String.format("%05x", chunk))), SoundSource.RECORDS, volume, 1f);
         }
 
         lastAudioChunk = chunk;
