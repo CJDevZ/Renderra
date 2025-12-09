@@ -36,6 +36,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
 import java.awt.*;
@@ -51,6 +52,9 @@ import static de.cjdev.renderra.Renderra.*;
 
 /// TESTING RESOLUTION: 128x72 // Currently: 108x54
 public class VideoPlayerClient implements ClientModInitializer {
+
+    public static final ResourceLocation MANIPULATE_ENTITY_IDENTIFIER = ResourceLocation.parse("axiom:manipulate_entity");
+    public static final ResourceLocation UPDATE_NBT_IDENTIFIER = ResourceLocation.parse("renderra:update_nbt");
 
     public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(ResourceLocation.fromNamespaceAndPath("renderra", "keybinds"));
     public static final KeyMapping OPEN_VIDEO_PLAYER = KeyBindingHelper.registerKeyBinding(new KeyMapping(
@@ -90,7 +94,12 @@ public class VideoPlayerClient implements ClientModInitializer {
         brightnessTag.putInt("block", lightLevel);
         brightnessTag.putInt("sky", 0);
         compoundTag.put("brightness", compoundTag);
-        new UpdateNBTPacket(PLAYBACK.SCREEN_META.getScreenUUIDs(), compoundTag).send();
+        var screenUUIDs = PLAYBACK.SCREEN_META.getScreenUUIDs();
+        List<de.cjdev.renderra.network.UpdateNBTPacket.Modified> modifiedList = new ArrayList<>(screenUUIDs.length);
+        for (UUID screenUUID : screenUUIDs) {
+            modifiedList.add(new de.cjdev.renderra.network.UpdateNBTPacket.Modified(screenUUID, null));
+        }
+        new UpdateNBTPacket(modifiedList, compoundTag).send();
     }
 
     public static boolean notInGame() {
@@ -130,6 +139,7 @@ public class VideoPlayerClient implements ClientModInitializer {
 
             PLAYBACK.subtitles = null;
             PLAYBACK.subtitleCurrently = null;
+            operationMode = OperationMode.NONE;
         });
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> dispatcher.register(getCommand()));
 
@@ -157,7 +167,9 @@ public class VideoPlayerClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             if (operationMode == OperationMode.ADD_SCREEN) {
-                screens = minecraft.level.getEntitiesOfClass(Display.TextDisplay.class, AABB.ofSize(minecraft.getCameraEntity().position(), 10f, 10f, 10f)).toArray(Display.TextDisplay[]::new);
+                var camera = minecraft.getCameraEntity();
+                if (camera == null) return;
+                screens = minecraft.level.getEntitiesOfClass(Display.TextDisplay.class, AABB.ofSize(camera.position(), 10f, 10f, 10f)).toArray(Display.TextDisplay[]::new);
                 if (minecraft.options.keyAttack.isDown()) {
                     for (Display.TextDisplay screen : screens) {
                         if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 14.14)) {
@@ -180,8 +192,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                 screens = null;
             }
             PLAYBACK.tick();
-            if (!axiomLoaded) return;
-            if (!(minecraft.screen instanceof VideoPlayerScreen)) {
+            if (axiomLoaded && !(minecraft.screen instanceof VideoPlayerScreen)) {
                 Display display = DisplayEntityManipulator.getActiveDisplayEntity();
                 switch (this.operationMode) {
                     case ADD_SCREEN -> {
@@ -200,9 +211,9 @@ public class VideoPlayerClient implements ClientModInitializer {
                 if (this.lastSelectedDisplay != display) {
                     this.lastSelectedDisplay = display;
                 }
-                if (minecraft.player != null && OPEN_VIDEO_PLAYER.isDown() && minecraft.player.getPermissionLevel() >= 2) {
-                    minecraft.setScreen(new VideoPlayerScreen(minecraft.screen, this));
-                }
+            }
+            if (minecraft.player != null && OPEN_VIDEO_PLAYER.isDown() && minecraft.player.getPermissionLevel() >= 2) {
+                minecraft.setScreen(new VideoPlayerScreen(minecraft.screen, this));
             }
         });
         WorldRenderEvents.BEFORE_TRANSLUCENT.register(RENDER_PIPELINE::extractAndDrawWaypoint);

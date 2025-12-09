@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import de.cjdev.renderra.mixin.MixinChunkMap;
 import de.cjdev.renderra.mixin.MixinTrackedEntity;
 import de.cjdev.renderra.network.FastFrameManipulate;
+import de.cjdev.renderra.network.UpdateNBTPacket;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.chat.FontDescription;
@@ -42,6 +43,7 @@ public class Renderra implements ModInitializer {
     @Override
     public void onInitialize() {
         FastFrameManipulate.register();
+        UpdateNBTPacket.register();
     }
 
     public static void sendPacketToAllNear(Entity entity, CustomPacketPayload.Type<?> customPayloadType, Packet<?> moddedPacket, Packet<?> vanillaPacket) {

@@ -8,7 +8,7 @@
   "contact": {},
   "license": "LGPL-3.0",
   "icon": "assets/renderra/icon.png",
-  "environment": "client",
+  "environment": "*",
   "entrypoints": {
     "main": [
       "de.cjdev.renderra.Renderra"
@@ -31,7 +31,9 @@
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric": "*",
-    "minecraft": ">=${min_minecraft_version} <=${minecraft_version}",
+    "minecraft": ">=${min_minecraft_version} <=${minecraft_version}"
+  },
+  "suggests": {
     "axiom": ">=${axiom_version}"
   }
 }

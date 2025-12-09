@@ -1,6 +1,5 @@
 package de.cjdev.renderra.client;
 
-import com.moulberry.axiom.packets.AxiomServerboundManipulateEntity;
 import de.cjdev.renderra.PlaybackHandler;
 import de.cjdev.renderra.VideoResult;
 import de.cjdev.renderra.client.network.FrameManipulatePacket;
@@ -20,6 +19,7 @@ import net.minecraft.world.phys.Vec3;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 
 import java.awt.image.BufferedImage;
+import java.util.List;
 import java.util.UUID;
 
 import static de.cjdev.renderra.client.VideoPlayerClient.notInGame;
@@ -71,8 +71,12 @@ public class ClientPlaybackHandler extends PlaybackHandler {
     }
 
     @Override
-    public void doNBTMerge(UUID uuid, CompoundTag merge) {
-        new UpdateNBTPacket(uuid, merge).send();
+    public void doEntityMerge(List<de.cjdev.renderra.network.UpdateNBTPacket.Modified> modified, CompoundTag merge) {
+        if (ClientPlayNetworking.canSend(VideoPlayerClient.UPDATE_NBT_IDENTIFIER)) {
+            ClientPlayNetworking.send(new de.cjdev.renderra.network.UpdateNBTPacket(modified, merge));
+        } else if (ClientPlayNetworking.canSend(VideoPlayerClient.MANIPULATE_ENTITY_IDENTIFIER)) {
+            new UpdateNBTPacket(modified, merge).send();
+        }
     }
 
     @Override
@@ -80,7 +84,7 @@ public class ClientPlaybackHandler extends PlaybackHandler {
         if (Minecraft.getInstance().getConnection() == null) return;
         if (ClientPlayNetworking.canSend(FastFrameManipulate.PACKET_TYPE)) {
             processFastFrame(GRAB, this::fastDisplayImage, this::videoDone);
-        } else if (ClientPlayNetworking.canSend(AxiomServerboundManipulateEntity.IDENTIFIER)) {
+        } else if (ClientPlayNetworking.canSend(VideoPlayerClient.MANIPULATE_ENTITY_IDENTIFIER)) {
             processAxiomFrame(GRAB, this::axiomDisplayImage, this::videoDone);
         } else {
             if (!this.warnedNoSupportedProtocol) {
@@ -114,7 +118,15 @@ public class ClientPlaybackHandler extends PlaybackHandler {
 
         int sectionHeight = Math.round(((float) height) / (screenCount));
         int pixelHeight = height - sectionHeight * (screenCount - 1);
-        ClientPlayNetworking.send(new FastFrameManipulate(SCREEN_META.getMainScreen().getId(), this.colorMode, SCREEN_META.pretty(), width, height, height - pixelHeight, bufferedImage));
+        ClientPlayNetworking.send(new FastFrameManipulate(
+                SCREEN_META.getMainScreen().getId(),
+                this.colorMode,
+                SCREEN_META.pretty(),
+                width,
+                height,
+                height - pixelHeight,
+                bufferedImage
+        ));
 
         Integer[] ids = SCREEN_META.getScreenIDs();
         int length = ids.length;

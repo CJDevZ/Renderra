@@ -1,20 +1,15 @@
 package de.cjdev.renderra;
 
-import com.moulberry.axiom.packets.AxiomServerboundManipulateEntity;
-import com.moulberry.axiom.utils.EntityDataUtils;
 import de.cjdev.renderra.audio.AudioSplitter;
 import de.cjdev.renderra.mixin.MixinChunkMap;
 import de.cjdev.renderra.mixin.MixinTrackedEntity;
 import de.cjdev.renderra.network.FastFrameManipulate;
+import de.cjdev.renderra.network.UpdateNBTPacket;
 import de.cjdev.renderra.subtitle.SRTLoader;
 import de.cjdev.renderra.subtitle.Subtitle;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.FloatTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerChunkCache;
@@ -22,10 +17,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.Frame;
@@ -195,12 +193,21 @@ public class PlaybackHandler {
         SCREEN_META.subtitleScreen.setText(text);
     }
 
-    public void doNBTMerge(UUID uuid, CompoundTag merge) {
-        Entity entity = getLevel().getEntity(uuid);
-        if (entity == null) return;
-        CompoundTag compoundTag = EntityDataUtils.saveWithoutId(entity);
-        compoundTag.merge(merge);
-        EntityDataUtils.load(entity, compoundTag);
+    public void doEntityMerge(List<de.cjdev.renderra.network.UpdateNBTPacket.Modified> modifiedList, CompoundTag merge) {
+        for (UpdateNBTPacket.Modified modified : modifiedList) {
+            Entity entity = getLevel().getEntity(modified.uuid());
+            if (entity == null) continue;
+            var position = modified.pos();
+            if (position != null) {
+                entity.setPos(position);
+            }
+            var output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, entity.registryAccess());
+            entity.saveWithoutId(output);
+            CompoundTag compoundTag = output.buildResult();
+            compoundTag.merge(merge);
+            var input = TagValueInput.create(ProblemReporter.DISCARDING, entity.registryAccess(), compoundTag);
+            entity.load(input);
+        }
     }
 
     public VideoResult fixScreens() {
@@ -217,22 +224,28 @@ public class PlaybackHandler {
         SCREEN_FIX.putInt("line_width", (SCREEN_META.pretty() ? 10 : 11) * SCREEN_META.width() + 1);
         SCREEN_FIX.getCompound("transformation").ifPresent(compoundTag ->
                 compoundTag.put("scale", SCALE));
-        doNBTMerge(entity.getUUID(), SCREEN_FIX);
+        doEntityMerge(List.of(new UpdateNBTPacket.Modified(entity.getUUID(), null)), SCREEN_FIX);
         int screenCount = SCREEN_META.screens.size();
         int curScreen = screenCount - 1;
         int screenHeight = SCREEN_META.height();
         int sectionHeight = Math.round(((float) screenHeight) / (screenCount));
 
-        var manipulateEntries = new ArrayList<AxiomServerboundManipulateEntity.ManipulateEntry>();
         UUID[] screenUUIDs = SCREEN_META.getScreenUUIDs();
-        for (int i = 1; i < screenUUIDs.length; ++i) {
-            double offset = (screenHeight - (curScreen--) * sectionHeight) * 0.25d * scale;
-            Vec3 position = pos.add(0, offset, 0);
-            var manipulateEntry = new AxiomServerboundManipulateEntity.ManipulateEntry(screenUUIDs[i], position, SCREEN_FIX);
-            manipulateEntries.add(manipulateEntry);
+        if (screenUUIDs.length > 1) {
+            List<UpdateNBTPacket.Modified> modifiedList = new ArrayList<>(screenUUIDs.length - 1);
+            for (int i = 1; i < screenUUIDs.length; ++i) {
+                double offset = (screenHeight - (curScreen--) * sectionHeight) * 0.25d * scale;
+                Vec3 position = pos.add(0, offset, 0);
+                modifiedList.add(new UpdateNBTPacket.Modified(screenUUIDs[i], position));
+            }
+
+            updateTextDisplays(modifiedList, SCREEN_FIX);
         }
-        new AxiomServerboundManipulateEntity(manipulateEntries).send();
         return VideoResult.OK;
+    }
+
+    public void updateTextDisplays(List<UpdateNBTPacket.Modified> modifiedList, CompoundTag merge) {
+        doEntityMerge(modifiedList, merge);
     }
 
     public void videoDone() {
