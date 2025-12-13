@@ -69,14 +69,12 @@ public class VideoPlayerClient implements ClientModInitializer {
     private Display lastSelectedDisplay;
     public final ClientPlaybackHandler PLAYBACK;
     //private final Robot ROBOT;
-    private final CustomRenderPipeline RENDER_PIPELINE;
     public static Display.TextDisplay[] screens = null;
     private boolean axiomLoaded;
 
     public VideoPlayerClient()/* throws AWTException*/ {
         PLAYBACK = new ClientPlaybackHandler();
         //ROBOT = new Robot();
-        RENDER_PIPELINE = new CustomRenderPipeline();
     }
 
     public enum OperationMode {
@@ -145,18 +143,18 @@ public class VideoPlayerClient implements ClientModInitializer {
         UPDATE = PLAYBACK::deltaTick;
 
         AttackBlockCallback.EVENT.register((player, level, interactionHand, blockPos, direction) -> {
-            if (!level.isClientSide()) return InteractionResult.PASS;
+            if (!level.isClientSide() || !player.hasPermissions(2)) return InteractionResult.PASS;
             Minecraft minecraft = Minecraft.getInstance();
             if (!minecraft.options.keyAttack.isDown()) return InteractionResult.PASS;
             if (operationMode == OperationMode.ADD_SCREEN) {
                 for (Display.TextDisplay screen : screens) {
-                    if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 14.14)) {
+                    if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
                         return InteractionResult.FAIL;
                     }
                 }
             } else if (operationMode == OperationMode.REMOVE_SCREEN) {
                 for (Display.TextDisplay screen : screens) {
-                    if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 14.14)) {
+                    if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
                         return InteractionResult.FAIL;
                     }
                 }
@@ -215,7 +213,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                 minecraft.setScreen(new VideoPlayerScreen(minecraft.screen, this));
             }
         });
-        WorldRenderEvents.BEFORE_TRANSLUCENT.register(RENDER_PIPELINE::extractAndDrawWaypoint);
+        WorldRenderEvents.BEFORE_TRANSLUCENT.register(CustomRenderPipeline.INSTANCE::extractAndDrawWaypoint);
 
         ClientEntityEvents.ENTITY_UNLOAD.register((entity, clientLevel) -> {
             if (!(entity instanceof Display.TextDisplay textDisplay)) return;

@@ -25,6 +25,8 @@ import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
 public class CustomRenderPipeline {
+    public static final CustomRenderPipeline INSTANCE = new CustomRenderPipeline();
+
     // :::custom-pipelines:define-pipeline
     private static final RenderPipeline FILLED_THROUGH_WALLS = RenderPipelines.register(RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
             .withLocation(ResourceLocation.fromNamespaceAndPath("renderra", "pipeline/debug_filled_box_through_walls"))
