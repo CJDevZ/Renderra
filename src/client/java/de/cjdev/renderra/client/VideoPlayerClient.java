@@ -163,6 +163,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
+            if (minecraft.player == null) return;
             if (minecraft.player.getPermissionLevel() < 2) return;
             if (operationMode == OperationMode.ADD_SCREEN) {
                 var camera = minecraft.getCameraEntity();
