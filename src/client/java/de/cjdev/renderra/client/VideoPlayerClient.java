@@ -143,7 +143,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         UPDATE = PLAYBACK::deltaTick;
 
         AttackBlockCallback.EVENT.register((player, level, interactionHand, blockPos, direction) -> {
-            if (!level.isClientSide() || !player.hasPermissions(2)) return InteractionResult.PASS;
+            if (!level.isClientSide() || player.getPermissionLevel() < 2) return InteractionResult.PASS;
             Minecraft minecraft = Minecraft.getInstance();
             if (!minecraft.options.keyAttack.isDown()) return InteractionResult.PASS;
             if (operationMode == OperationMode.ADD_SCREEN) {
@@ -163,6 +163,7 @@ public class VideoPlayerClient implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
+            if (minecraft.player.getPermissionLevel() < 2) return;
             if (operationMode == OperationMode.ADD_SCREEN) {
                 var camera = minecraft.getCameraEntity();
                 if (camera == null) return;
@@ -209,7 +210,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                     this.lastSelectedDisplay = display;
                 }
             }
-            if (minecraft.player != null && OPEN_VIDEO_PLAYER.isDown() && minecraft.player.getPermissionLevel() >= 2) {
+            if (minecraft.player != null && OPEN_VIDEO_PLAYER.isDown()) {
                 minecraft.setScreen(new VideoPlayerScreen(minecraft.screen, this));
             }
         });
