@@ -36,7 +36,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
 import java.awt.*;
@@ -172,7 +171,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                 screens = minecraft.level.getEntitiesOfClass(Display.TextDisplay.class, AABB.ofSize(camera.position(), 10f, 10f, 10f)).toArray(Display.TextDisplay[]::new);
                 if (minecraft.options.keyAttack.isDown()) {
                     for (Display.TextDisplay screen : screens) {
-                        if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 14.14)) {
+                        if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
                             boolean success = PLAYBACK.SCREEN_META.addScreen(screen);
                             addScreenMsg(minecraft, true, success);
                         }
@@ -182,7 +181,7 @@ public class VideoPlayerClient implements ClientModInitializer {
                 screens = PLAYBACK.SCREEN_META.screens.toArray(Display.TextDisplay[]::new);
                 if (minecraft.options.keyAttack.isDown()) {
                     for (Display.TextDisplay screen : screens) {
-                        if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 14.14)) {
+                        if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
                             boolean success = PLAYBACK.SCREEN_META.removeScreen(screen);
                             addScreenMsg(minecraft, false, success);
                         }
