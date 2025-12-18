@@ -161,7 +161,6 @@ public class FastFrameManipulate implements CustomPacketPayload {
     public void handle(MinecraftServer server, ServerPlayer player) {
         if (player.getPermissionLevel() < 2) return;
         if (player.level().getEntity(this.entityID) instanceof Display.TextDisplay textDisplay) {
-            LOGGER.info("Received TextDisplay from {}", this.entityID);
             sendBackDisplay(textDisplay);
         }
     }

@@ -82,7 +82,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     }
 
     public void updateLightLevel(int lightLevel) {
-        System.out.println("UPDATE LIGHT");
+        LOGGER.debug("UPDATE LIGHT");
 
         CompoundTag compoundTag = new CompoundTag();
         CompoundTag brightnessTag = new CompoundTag();
@@ -111,7 +111,6 @@ public class VideoPlayerClient implements ClientModInitializer {
 
     public void handleFastFrameManipulate(FastFrameManipulate packet, LocalPlayer player) {
         if (player.level().getEntity(packet.getEntityID()) instanceof Display.TextDisplay textDisplay) {
-            LOGGER.info("Handling fast frame manipulate");
             Component text = Component.literal("").withStyle(style ->
                     style.withFont(FONT));
             List<Component> sections = new ArrayList<>();
