@@ -1,20 +1,15 @@
-package de.cjdev.renderra;
+package de.cjdev.renderra.video;
 
+import de.cjdev.renderra.VideoResult;
 import de.cjdev.renderra.audio.AudioSplitter;
-import de.cjdev.renderra.mixin.MixinChunkMap;
-import de.cjdev.renderra.mixin.MixinTrackedEntity;
 import de.cjdev.renderra.network.FastFrameManipulate;
+import de.cjdev.renderra.network.ImageIterable;
 import de.cjdev.renderra.network.UpdateNBTPacket;
 import de.cjdev.renderra.subtitle.SRTLoader;
 import de.cjdev.renderra.subtitle.Subtitle;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerChunkCache;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.ProblemReporter;
@@ -447,17 +442,13 @@ public class PlaybackHandler {
         ListTag listTag = new ListTag();
         StringBuilder curString = new StringBuilder();
         boolean fifteen_bit = colorMode == ColorMode.FIFTEEN_BIT;
-        int fifteen_bit_colors = 30;
         if (fifteen_bit) {
             for (int y = heightOffset; y < height; ++y) {
                 for (int x = 0; x < width; ++x) {
                     boolean endX = x == width - 1;
                     int rgb = image.getRGB(x, y) & 0xFFFFFF;
 
-                    int red = Math.round(((rgb >> 16) & 0xFF) / 255f * (fifteen_bit_colors - 1));
-                    int green = Math.round(((rgb >> 8) & 0xFF) / 255f * (fifteen_bit_colors - 1));
-                    int blue = Math.round((rgb & 0xFF) / 255f * (fifteen_bit_colors - 1));
-                    curString.append((char) (blue * fifteen_bit_colors * fifteen_bit_colors + green * fifteen_bit_colors + red + 12832));
+                    curString.append((char) (colorMode.getMappedColor(rgb) + 12832));
                     if (noSaving && !endX) curString.append('.');
                 }
             }
@@ -561,32 +552,32 @@ public class PlaybackHandler {
     //    }
     //}
 
+    protected void sendFastFramePacket(FastFrameManipulate fastFrameManipulate) {
+
+    }
+
     protected void fastDisplayImage(BufferedImage bufferedImage) {
         int screenCount = SCREEN_META.screens.size();
 
         int width = bufferedImage.getWidth();
         int height = bufferedImage.getHeight();
+        boolean pretty = SCREEN_META.pretty();
 
         int sectionHeight = Math.round(((float) height) / (screenCount));
         int pixelHeight = height - sectionHeight * (screenCount - 1);
-        ClientboundCustomPayloadPacket[] packets = new ClientboundCustomPayloadPacket[screenCount];
-        packets[0] = new ClientboundCustomPayloadPacket(new FastFrameManipulate(SCREEN_META.getMainScreen().getId(), this.colorMode, SCREEN_META.pretty(), width, height, height - pixelHeight, bufferedImage));
+        Display.TextDisplay mainScreen = SCREEN_META.getMainScreen();
+        new FastFrameManipulate(mainScreen.getId(), this.colorMode, pretty, ImageIterable.parseImage(this.colorMode, bufferedImage, width, height, height - pixelHeight, pretty))
+                .sendBackDisplay(mainScreen);
 
         Integer[] ids = SCREEN_META.getScreenIDs();
+        Display.TextDisplay[] textDisplays = SCREEN_META.getScreens();
         int length = ids.length;
         while (--length > 0) {
             int screen = ids[length];
             int curHeight = (screenCount - length - 1) * sectionHeight;
-            packets[length] = new ClientboundCustomPayloadPacket(new FastFrameManipulate(screen, this.colorMode, SCREEN_META.pretty(), width, curHeight + sectionHeight, curHeight, bufferedImage));
-        }
-
-        Display.TextDisplay mainScreen = SCREEN_META.getMainScreen();
-        for (ServerPlayerConnection connection : ((MixinTrackedEntity) ((MixinChunkMap) ((ServerChunkCache) mainScreen.level().getChunkSource()).chunkMap).getEntityMap().get(mainScreen.getId())).getSeenBy()) {
-            ServerPlayer serverPlayer = connection.getPlayer();
-            if (!ServerPlayNetworking.canSend(serverPlayer, FastFrameManipulate.PACKET_TYPE)) continue;
-            for (var packet : packets) {
-                connection.send(packet);
-            }
+            ImageIterable image = ImageIterable.parseImage(this.colorMode, bufferedImage, width, curHeight + sectionHeight, curHeight, pretty);
+            var fastFrameManipulate = new FastFrameManipulate(screen, this.colorMode, pretty, image);
+            fastFrameManipulate.sendBackDisplay(textDisplays[length]);
         }
     }
 
@@ -595,5 +586,17 @@ public class PlaybackHandler {
             SCREEN_META.dirty = false;
             fixScreens();
         }
+    }
+
+    public static PlaybackHandler createPlaybackHandler(Display.TextDisplay[] textDisplays, int resolutionX, int resolutionY, float scale) {
+        PlaybackHandler playbackHandler = new PlaybackHandler();
+
+        ScreenMetaData screenMeta = playbackHandler.SCREEN_META;
+        screenMeta.addScreens(textDisplays);
+        screenMeta.width(resolutionX);
+        screenMeta.height(resolutionY);
+        screenMeta.scale(scale);
+
+        return playbackHandler;
     }
 }

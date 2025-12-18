@@ -1,7 +1,6 @@
 package de.cjdev.renderra.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.blaze3d.vertex.*;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -10,9 +9,9 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.moulberry.axiom.displayentity.DisplayEntityManipulator;
 import de.cjdev.renderra.client.network.UpdateNBTPacket;
 import de.cjdev.renderra.client.screen.VideoPlayerScreen;
+import de.cjdev.renderra.client.video.ClientPlaybackHandler;
 import de.cjdev.renderra.subtitle.SRTLoader;
 import de.cjdev.renderra.network.FastFrameManipulate;
-import de.cjdev.renderra.network.ImageIterable;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -38,7 +37,6 @@ import net.minecraft.world.entity.Display;
 import net.minecraft.world.phys.AABB;
 import org.lwjgl.glfw.GLFW;
 
-import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -113,9 +111,12 @@ public class VideoPlayerClient implements ClientModInitializer {
 
     public void handleFastFrameManipulate(FastFrameManipulate packet, LocalPlayer player) {
         if (player.level().getEntity(packet.getEntityID()) instanceof Display.TextDisplay textDisplay) {
+            LOGGER.info("Handling fast frame manipulate");
             Component text = Component.literal("").withStyle(style ->
                     style.withFont(FONT));
-            text.getSiblings().addAll(((ImageIterable) packet.getBufferedImage()).sections());
+            List<Component> sections = new ArrayList<>();
+            packet.colorMode.processPixels(packet.imageProcessingResult, sections, packet.pretty);
+            text.getSiblings().addAll(sections);
             textDisplay.setText(text);
         }
     }

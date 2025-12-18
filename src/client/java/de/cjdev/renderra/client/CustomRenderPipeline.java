@@ -93,7 +93,7 @@ public class CustomRenderPipeline {
 
         // Initialize or resize the vertex buffer as needed
         if (vertexBuffer == null || vertexBuffer.size() < vertexBufferSize) {
-            vertexBuffer = new MappableRingBuffer(() -> "renderra" + " example render pipeline", GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_MAP_WRITE, vertexBufferSize);
+            vertexBuffer = new MappableRingBuffer(() -> "renderra render pipeline", GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_MAP_WRITE, vertexBufferSize);
         }
 
         // Copy vertex data into the vertex buffer

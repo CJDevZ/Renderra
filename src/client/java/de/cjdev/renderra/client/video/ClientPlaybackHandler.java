@@ -1,12 +1,14 @@
-package de.cjdev.renderra.client;
+package de.cjdev.renderra.client.video;
 
-import de.cjdev.renderra.PlaybackHandler;
+import de.cjdev.renderra.client.VideoPlayerClient;
+import de.cjdev.renderra.video.PlaybackHandler;
 import de.cjdev.renderra.VideoResult;
 import de.cjdev.renderra.client.network.FrameManipulatePacket;
 import de.cjdev.renderra.client.network.TextManipulatePacket;
 import de.cjdev.renderra.client.network.UpdateNBTPacket;
 import de.cjdev.renderra.client.screen.VideoPlayerScreen;
 import de.cjdev.renderra.network.FastFrameManipulate;
+import de.cjdev.renderra.network.ImageIterable;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
@@ -115,17 +117,22 @@ public class ClientPlaybackHandler extends PlaybackHandler {
 
         int width = bufferedImage.getWidth();
         int height = bufferedImage.getHeight();
+        boolean pretty = SCREEN_META.pretty();
 
         int sectionHeight = Math.round(((float) height) / (screenCount));
         int pixelHeight = height - sectionHeight * (screenCount - 1);
         ClientPlayNetworking.send(new FastFrameManipulate(
                 SCREEN_META.getMainScreen().getId(),
                 this.colorMode,
-                SCREEN_META.pretty(),
-                width,
-                height,
-                height - pixelHeight,
-                bufferedImage
+                pretty,
+                ImageIterable.parseImage(
+                        this.colorMode,
+                        bufferedImage,
+                        width,
+                        height,
+                        height - pixelHeight,
+                        pretty
+                )
         ));
 
         Integer[] ids = SCREEN_META.getScreenIDs();
@@ -133,7 +140,7 @@ public class ClientPlaybackHandler extends PlaybackHandler {
         while (--length > 0) {
             int screen = ids[length];
             int curHeight = (screenCount - length - 1) * sectionHeight;
-            ClientPlayNetworking.send(new FastFrameManipulate(screen, this.colorMode, SCREEN_META.pretty(), width, curHeight + sectionHeight, curHeight, bufferedImage));
+            ClientPlayNetworking.send(new FastFrameManipulate(screen, this.colorMode, pretty, ImageIterable.parseImage(this.colorMode, bufferedImage, width, curHeight + sectionHeight, curHeight, pretty)));
         }
     }
 }

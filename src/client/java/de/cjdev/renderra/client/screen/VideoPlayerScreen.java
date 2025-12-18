@@ -2,6 +2,10 @@ package de.cjdev.renderra.client.screen;
 
 import de.cjdev.renderra.*;
 import de.cjdev.renderra.client.VideoPlayerClient;
+import de.cjdev.renderra.video.ColorMode;
+import de.cjdev.renderra.video.PlaybackHandler;
+import de.cjdev.renderra.video.ReplayMode;
+import de.cjdev.renderra.video.VideoMetaData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;

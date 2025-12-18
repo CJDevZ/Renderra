@@ -1,4 +1,4 @@
-package de.cjdev.renderra;
+package de.cjdev.renderra.video;
 
 public enum ReplayMode {
     NORMAL(0xFFFFFF),

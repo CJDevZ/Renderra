@@ -1,8 +1,9 @@
-package de.cjdev.renderra;
+package de.cjdev.renderra.video;
 
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.UUID;
 
@@ -70,9 +71,17 @@ public class ScreenMetaData {
         return screens.add(display);
     }
 
+    public void addScreens(Display.TextDisplay... displays) {
+        screens.addAll(Arrays.asList(displays));
+    }
+
     public boolean removeScreen(Display.TextDisplay display) {
         this.dirty = true;
         return screens.remove(display);
+    }
+
+    public Display.TextDisplay[] getScreens() {
+        return screens.toArray(Display.TextDisplay[]::new);
     }
 
     public UUID[] getScreenUUIDs() {

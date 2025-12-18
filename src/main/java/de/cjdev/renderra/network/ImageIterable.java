@@ -1,20 +1,66 @@
 package de.cjdev.renderra.network;
 
-import de.cjdev.renderra.ColorMode;
+import de.cjdev.renderra.video.ColorMode;
+import de.cjdev.renderra.video.ImageProcessingResult;
+import it.unimi.dsi.fastutil.ints.AbstractInt2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntLinkedOpenHashMap;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import org.luaj.vm2.ast.Str;
 
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
-public record ImageIterable(int[] palette, List<PixelWidth> pixelWidths, List<Component> sections) {
+public record ImageIterable(ImageProcessingResult processingResult, List<Component> sections) {
 
-    public static ImageIterable read(FriendlyByteBuf byteBuf, ColorMode colorMode, boolean pretty) {
-        return read(byteBuf, colorMode, pretty, false);
+    public static ImageIterable parseImage(ColorMode colorMode, BufferedImage image, int width, int height, int heightOffset, boolean pretty) {
+        AbstractInt2IntMap paletteMap = new Int2IntLinkedOpenHashMap();
+        paletteMap.defaultReturnValue(-1);
+        int paletteIndex = 0;
+
+        List<PixelWidth> pixelWidths = new ArrayList<>();
+        int lastColor = -1;
+        int consecutivePixels = 0;
+
+        for (int y = heightOffset; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                int rgb = colorMode.getMappedColor(image.getRGB(x, y) & 0xFFFFFF);
+
+                // 1. Build Palette (Primitive check)
+                if (!paletteMap.containsKey(rgb)) {
+                    paletteMap.put(rgb, paletteIndex++);
+                }
+
+                // 2. Build RLE Segments
+                if (lastColor == -1) {
+                    lastColor = rgb;
+                }
+
+                if (rgb == lastColor) {
+                    ++consecutivePixels;
+                } else {
+                    pixelWidths.add(new PixelWidth(consecutivePixels, paletteMap.get(lastColor)));
+                    consecutivePixels = 1;
+                    lastColor = rgb;
+                }
+            }
+        }
+
+        // Flush last segment
+        if (consecutivePixels > 0) {
+            pixelWidths.add(new PixelWidth(consecutivePixels, paletteMap.get(lastColor)));
+        }
+
+        // 3. Generate Sections via ColorMode
+        int[] paletteArray = paletteMap.keySet().toIntArray();
+        ImageProcessingResult imageProcessingResult = new ImageProcessingResult(paletteArray, pixelWidths);
+        List<Component> sections = new ArrayList<>();
+        colorMode.processPixels(imageProcessingResult, sections, pretty);
+
+        return new ImageIterable(new ImageProcessingResult(paletteArray, pixelWidths), sections);
     }
 
-    public static ImageIterable read(FriendlyByteBuf byteBuf, ColorMode colorMode, boolean pretty, boolean forClient) {
+    public static ImageIterable read(FriendlyByteBuf byteBuf, ColorMode colorMode, boolean pretty) {
         int paletteLen = byteBuf.readVarInt();
         int[] palette = new int[paletteLen];
         for (int i = 0; i < paletteLen; ++i) {
@@ -23,58 +69,8 @@ public record ImageIterable(int[] palette, List<PixelWidth> pixelWidths, List<Co
 
         List<Component> sectionList = new ArrayList<>();
         List<PixelWidth> pixelWidths = new ArrayList<>();
-        if (colorMode == ColorMode.FIFTEEN_BIT) {
-            StringBuilder pixels = new StringBuilder();
-            while (byteBuf.isReadable()) {
-                var consecutive = byteBuf.readVarInt();
-                var colorIndex = byteBuf.readVarInt();
-                if (consecutive < 0) continue;
-                String pixel = String.valueOf((char)(palette[colorIndex] + 12832));
-                if (pretty) pixel += '.';
-                if (!forClient) pixelWidths.add(new PixelWidth(consecutive, colorIndex));
-
-                int pixelChars = pixel.length();
-
-                while (consecutive > 0) {
-                    // How many pixels remain in this section
-                    int remainingChars = Short.MAX_VALUE - pixels.length();
-
-                    // How many pixels can fit
-                    int pixelsFit = remainingChars / pixelChars;
-
-                    if (pixelsFit == 0) {
-                        // No room on this line, flush it
-                        sectionList.add(Component.literal(pixels.toString()));
-                        pixels.setLength(0);
-                        continue;
-                    }
-
-                    int toWrite = Math.min(pixelsFit, consecutive);
-                    pixels.repeat(pixel, toWrite);
-
-                    consecutive -= toWrite;
-
-                    if (pixels.length() == Short.MAX_VALUE) {
-                        sectionList.add(Component.literal(pixels.toString()));
-                        pixels.setLength(0);
-                    }
-                }
-            }
-            if (!pixels.isEmpty()) {
-                sectionList.add(Component.literal(pixels.toString()));
-            }
-        } else {
-            String pixel = "A";
-            if (pretty) pixel += '.';
-            while (byteBuf.isReadable()) {
-                var consecutive = byteBuf.readVarInt();
-                var colorIndex = byteBuf.readVarInt();
-                if (consecutive < 0) continue;
-                if (!forClient) pixelWidths.add(new PixelWidth(consecutive, colorIndex));
-                sectionList.add(Component.literal(pixel.repeat(consecutive)).withColor(palette[colorIndex]));
-            }
-        }
-        return new ImageIterable(palette, pixelWidths, sectionList);
+        colorMode.readSectionByBuffer(byteBuf, palette, pretty, sectionList, pixelWidths);
+        return new ImageIterable(new ImageProcessingResult(palette, pixelWidths), sectionList);
     }
 
     public record PixelWidth(int consecutive, int colorIndex) {

@@ -1,4 +1,4 @@
-package de.cjdev.renderra;
+package de.cjdev.renderra.video;
 
 public record VideoMetaData(String fileName, double frameRate, long secondsLength, double frameDelta) {
     public static VideoMetaData None() {
