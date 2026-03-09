@@ -9,7 +9,7 @@ import de.cjdev.renderra.subtitle.SRTLoader;
 import de.cjdev.renderra.subtitle.Subtitle;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.ProblemReporter;
@@ -61,7 +61,7 @@ public class PlaybackHandler {
     public ReplayMode replayMode;
     public ColorMode colorMode;
     public ScaleMode scaleMode;
-    public Identifier audioResource;
+    public ResourceLocation audioResource;
 
     public Level level;
     protected static Vec3 pos;
@@ -77,7 +77,7 @@ public class PlaybackHandler {
         replayMode = ReplayMode.NORMAL;
         colorMode = ColorMode.FULL;
         scaleMode = ScaleMode.BILINEAR;
-        audioResource = Identifier.parse("renderra:part");
+        audioResource = ResourceLocation.parse("renderra:part");
         /// /// /// /// /// ///
         ListTag SCALE = new ListTag();
         FloatTag SCALAR = FloatTag.valueOf(screenMeta.scale());

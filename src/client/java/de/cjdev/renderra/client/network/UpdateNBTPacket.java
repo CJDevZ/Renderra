@@ -4,7 +4,7 @@ import com.moulberry.axiom.packets.AxiomServerboundManipulateEntity;
 import com.moulberry.axiom.packets.AxiomServerboundPacket;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -13,7 +13,7 @@ import java.util.List;
 public record UpdateNBTPacket(List<de.cjdev.renderra.network.UpdateNBTPacket.Modified> modifiedList, CompoundTag nbt) implements AxiomServerboundPacket {
 
     @Override
-    public Identifier id() {
+    public ResourceLocation id() {
         return AxiomServerboundManipulateEntity.IDENTIFIER;
     }
 

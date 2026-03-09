@@ -4,7 +4,7 @@ import com.moulberry.axiom.packets.AxiomServerboundManipulateEntity;
 import com.moulberry.axiom.packets.AxiomServerboundPacket;
 import net.minecraft.nbt.EndTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Relative;
@@ -26,7 +26,7 @@ public class FramesRepositionPacket implements AxiomServerboundPacket {
     }
 
     @Override
-    public Identifier id() {
+    public ResourceLocation id() {
         return AxiomServerboundManipulateEntity.IDENTIFIER;
     }
 

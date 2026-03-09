@@ -29,12 +29,12 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.UuidArgument;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.server.permissions.Permissions;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.item.component.CustomModelData;
@@ -54,10 +54,10 @@ import static de.cjdev.renderra.Renderra.*;
 /// TESTING RESOLUTION: 128x72 // Currently: 108x54
 public class VideoPlayerClient implements ClientModInitializer {
 
-    public static final Identifier MANIPULATE_ENTITY_IDENTIFIER = Identifier.parse("axiom:manipulate_entity");
-    public static final Identifier UPDATE_NBT_IDENTIFIER = Identifier.parse("renderra:update_nbt");
+    public static final ResourceLocation MANIPULATE_ENTITY_IDENTIFIER = ResourceLocation.parse("axiom:manipulate_entity");
+    public static final ResourceLocation UPDATE_NBT_IDENTIFIER = ResourceLocation.parse("renderra:update_nbt");
 
-    public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("renderra", "keybinds"));
+    public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(ResourceLocation.fromNamespaceAndPath("renderra", "keybinds"));
     public static final KeyMapping OPEN_VIDEO_PLAYER = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.renderra.open",
             InputConstants.Type.KEYSYM,
@@ -152,7 +152,7 @@ public class VideoPlayerClient implements ClientModInitializer {
 
         if (!axiomLoaded) {
             AttackBlockCallback.EVENT.register((player, level, interactionHand, blockPos, direction) -> {
-                if (!level.isClientSide() || !player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                if (!level.isClientSide() || !player.hasPermissions(Commands.LEVEL_GAMEMASTERS))
                     return InteractionResult.PASS;
                 Minecraft minecraft = Minecraft.getInstance();
                 if (!minecraft.options.keyAttack.isDown()) return InteractionResult.PASS;
@@ -175,7 +175,7 @@ public class VideoPlayerClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             if (minecraft.player == null) return;
-            if (!minecraft.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) return;
+            if (!minecraft.player.hasPermissions(Commands.LEVEL_GAMEMASTERS)) return;
             if (!axiomLoaded) {
                 if (operationMode == OperationMode.ADD_SCREEN) {
                     var camera = minecraft.getCameraEntity();

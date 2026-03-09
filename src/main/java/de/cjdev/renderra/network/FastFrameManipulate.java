@@ -14,12 +14,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.commands.data.DataCommands;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permission;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomModelData;
@@ -28,7 +25,7 @@ import java.util.*;
 
 @MethodsReturnNonnullByDefault
 public record FastFrameManipulate(int entityID, int[] sections) implements CustomPacketPayload {
-    public static final Identifier IDENTIFIER = Identifier.parse("videoplayer:frame_update");
+    public static final ResourceLocation IDENTIFIER = ResourceLocation.parse("videoplayer:frame_update");
     public static final Type<FastFrameManipulate> PACKET_TYPE =
             new Type<>(IDENTIFIER);
 
@@ -59,7 +56,7 @@ public record FastFrameManipulate(int entityID, int[] sections) implements Custo
     }
 
     public void handle(MinecraftServer server, ServerPlayer player) {
-        if (!player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) return;
+        if (!player.hasPermissions(Commands.LEVEL_GAMEMASTERS)) return;
         if (player.level().getEntity(this.entityID) instanceof Display.ItemDisplay display) {
             sendBackDisplay(display);
         }

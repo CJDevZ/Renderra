@@ -65,8 +65,9 @@ public class VideoPlayerScreen extends Screen {
         }).bounds(40, this.height - 40, 20, 20).build();
         this.addRenderableWidget(playButton);
 
-        var cycleLoopBtn = CycleButton.builder(o -> null, this.videoPlayer.PLAYBACK.replayMode)
+        var cycleLoopBtn = CycleButton.<ReplayMode>builder(o -> null)
                 .withValues(ReplayMode.VALUES)
+                .withInitialValue(this.videoPlayer.PLAYBACK.replayMode)
                 .create(70, this.height - 40, 20, 20, null, (cycleButton, object) -> {
                     this.videoPlayer.PLAYBACK.replayMode = object;
                     cycleButton.setMessage(Component.literal("\uD83D\uDD01").withColor(object.buttonColor));
@@ -74,13 +75,15 @@ public class VideoPlayerScreen extends Screen {
         this.addRenderableWidget(cycleLoopBtn);
         cycleLoopBtn.setMessage(Component.literal("\uD83D\uDD01").withColor(this.videoPlayer.PLAYBACK.replayMode.buttonColor));
 
-        this.addRenderableWidget(CycleButton.builder(o -> Component.literal(o.name()), this.videoPlayer.PLAYBACK.colorMode)
+        this.addRenderableWidget(CycleButton.<ColorMode>builder(o -> Component.literal(o.name()))
                 .withValues(ColorMode.VALUES)
+                .withInitialValue(this.videoPlayer.PLAYBACK.colorMode)
                 .create(285, this.height - 40 - 30 * 3, 115, 20, Component.literal("Color"), (cycleButton, object) ->
                         this.videoPlayer.PLAYBACK.colorMode = object));
 
-        this.addRenderableWidget(CycleButton.builder(o -> Component.literal(o.name()), this.videoPlayer.PLAYBACK.scaleMode)
+        this.addRenderableWidget(CycleButton.<ScaleMode>builder(o -> Component.literal(o.name()))
                 .withValues(ScaleMode.VALUES)
+                .withInitialValue(this.videoPlayer.PLAYBACK.scaleMode)
                 .create(285, this.height - 40 - 30 * 4, 115, 20, Component.literal("Scale"), (cycleButton, object) ->
                         this.videoPlayer.PLAYBACK.scaleMode = object));
 
@@ -88,21 +91,24 @@ public class VideoPlayerScreen extends Screen {
 
         //this.addRenderableWidget(new VideoSelectionDropDown(this.minecraft, 240, 100, 20, 20, 100));
 
-        this.addRenderableWidget(CycleButton.builder(Component::literal, this.videoPlayer.PLAYBACK.videoName)
+        this.addRenderableWidget(CycleButton.builder(Component::literal)
                 .withValues(this.videoPlayer.getVideoNames())
+                .withInitialValue(this.videoPlayer.PLAYBACK.videoName)
                 .create(160, this.height - 40 - 30, 240, 20, Component.literal("Video"), (cycleButton, value) -> {
                     this.videoPlayer.PLAYBACK.videoName = value;
                     playButton.setMessage(getPlayButtonText());
                 }));
 
-        CycleButton<VideoPlayerClient.OperationMode> opButton = CycleButton.builder(o -> Component.literal(o.name()), this.videoPlayer.operationMode)
+        CycleButton<VideoPlayerClient.OperationMode> opButton = CycleButton.<VideoPlayerClient.OperationMode>builder(o -> Component.literal(o.name()))
                 .withValues(VideoPlayerClient.OperationMode.VALUES)
+                .withInitialValue(this.videoPlayer.operationMode)
                 .create(40, this.height - 40 - 90, 110, 20, Component.literal("OP"), (cycleButton, value) ->
                         this.videoPlayer.operationMode = value);
         this.addRenderableWidget(opButton);
 
-        this.addRenderableWidget(CycleButton.builder(rotation -> Component.literal(rotation.name()), this.videoPlayer.PLAYBACK.rotation)
+        this.addRenderableWidget(CycleButton.<Rotation>builder(rotation -> Component.literal(rotation.name()))
                 .withValues(Rotation.values())
+                .withInitialValue(this.videoPlayer.PLAYBACK.rotation)
                 .create(40, this.height - 40 - 60, 110, 20, Component.literal("Rotation"), (cycleButton, value) ->
                         this.videoPlayer.PLAYBACK.rotation = value));
 
