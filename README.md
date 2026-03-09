@@ -3,7 +3,7 @@
 - Fully supports **vanilla clients** — optional mod installation for viewers.
 
 ## 🌷 ResourcePack
-⚠️ Download [`ResourcePack.zip`](https://cdn.modrinth.com/data/Pg2wGJ0k/versions/j3SQXxO1/ResourcePack.zip) and apply it if you aren't already playing with this mod.
+⚠️ Download [`ResourcePack.zip`](https://cdn.modrinth.com/data/Pg2wGJ0k/versions/uHqjXeUQ/ResourcePack.zip) and apply it if you aren't already playing with this mod.
 
 ## 📖 Usage
 1. Press `B` (default, configurable keybind) to open the video player screen.
@@ -19,7 +19,7 @@
 `/vidplay subtitles/subtitleScreen <.srt file/uuid>` for subtitle settings
 
 ## 🔊 Audio Streaming
-1. Download [`ResourcePack.zip`](https://cdn.modrinth.com/data/Pg2wGJ0k/versions/j3SQXxO1/ResourcePack.zip).
+1. Download [`ResourcePack.zip`](https://cdn.modrinth.com/data/Pg2wGJ0k/versions/uHqjXeUQ/ResourcePack.zip).
 2. Move the generated audio files into the `assets/renderra/sounds` folder within.
 3. Apply the `ResourcePack.zip` to your client and share it with others so everyone can hear the audio.
 
