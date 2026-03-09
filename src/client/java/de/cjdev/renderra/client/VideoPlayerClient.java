@@ -12,6 +12,7 @@ import de.cjdev.renderra.client.screen.VideoPlayerScreen;
 import de.cjdev.renderra.client.video.ClientPlaybackHandler;
 import de.cjdev.renderra.subtitle.SRTLoader;
 import de.cjdev.renderra.network.FastFrameManipulate;
+import it.unimi.dsi.fastutil.ints.IntList;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -29,11 +30,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.commands.arguments.UuidArgument;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Display;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.phys.AABB;
 import org.lwjgl.glfw.GLFW;
 
@@ -50,10 +54,10 @@ import static de.cjdev.renderra.Renderra.*;
 /// TESTING RESOLUTION: 128x72 // Currently: 108x54
 public class VideoPlayerClient implements ClientModInitializer {
 
-    public static final ResourceLocation MANIPULATE_ENTITY_IDENTIFIER = ResourceLocation.parse("axiom:manipulate_entity");
-    public static final ResourceLocation UPDATE_NBT_IDENTIFIER = ResourceLocation.parse("renderra:update_nbt");
+    public static final Identifier MANIPULATE_ENTITY_IDENTIFIER = Identifier.parse("axiom:manipulate_entity");
+    public static final Identifier UPDATE_NBT_IDENTIFIER = Identifier.parse("renderra:update_nbt");
 
-    public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(ResourceLocation.fromNamespaceAndPath("renderra", "keybinds"));
+    public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("renderra", "keybinds"));
     public static final KeyMapping OPEN_VIDEO_PLAYER = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.renderra.open",
             InputConstants.Type.KEYSYM,
@@ -67,7 +71,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     private Display lastSelectedDisplay;
     public final ClientPlaybackHandler PLAYBACK;
     //private final Robot ROBOT;
-    public static Display.TextDisplay[] screens = null;
+    public static Display.ItemDisplay[] screens = null;
     private boolean axiomLoaded;
 
     public VideoPlayerClient()/* throws AWTException*/ {
@@ -78,7 +82,9 @@ public class VideoPlayerClient implements ClientModInitializer {
     public enum OperationMode {
         NONE,
         ADD_SCREEN,
-        REMOVE_SCREEN,
+        REMOVE_SCREEN;
+
+        public static final OperationMode[] VALUES = OperationMode.values();
     }
 
     public void updateLightLevel(int lightLevel) {
@@ -101,22 +107,24 @@ public class VideoPlayerClient implements ClientModInitializer {
         return Minecraft.getInstance().getConnection() == null;
     }
 
-    public boolean addScreen(Display.TextDisplay display) {
+    public boolean addScreen(Display.ItemDisplay display) {
         return PLAYBACK.SCREEN_META.addScreen(display);
     }
 
-    public boolean removeScreen(Display.TextDisplay display) {
+    public boolean removeScreen(Display.ItemDisplay display) {
         return PLAYBACK.SCREEN_META.removeScreen(display);
     }
 
     public void handleFastFrameManipulate(FastFrameManipulate packet, LocalPlayer player) {
-        if (player.level().getEntity(packet.getEntityID()) instanceof Display.TextDisplay textDisplay) {
-            Component text = Component.literal("").withStyle(style ->
-                    style.withFont(FONT));
-            List<Component> sections = new ArrayList<>();
-            packet.colorMode.processPixels(packet.imageProcessingResult, sections, packet.pretty);
-            text.getSiblings().addAll(sections);
-            textDisplay.setText(text);
+        if (player.level().getEntity(packet.entityID()) instanceof Display.ItemDisplay display) {
+            display.getItemStack().update(DataComponents.CUSTOM_MODEL_DATA, CustomModelData.EMPTY, customModelData ->
+                    new CustomModelData(
+                            customModelData.floats(),
+                            customModelData.flags(),
+                            customModelData.strings(),
+                            IntList.of(packet.sections())
+                    )
+            );
         }
     }
 
@@ -142,67 +150,72 @@ public class VideoPlayerClient implements ClientModInitializer {
 
         UPDATE = PLAYBACK::deltaTick;
 
-        AttackBlockCallback.EVENT.register((player, level, interactionHand, blockPos, direction) -> {
-            if (!level.isClientSide() || player.getPermissionLevel() < 2) return InteractionResult.PASS;
-            Minecraft minecraft = Minecraft.getInstance();
-            if (!minecraft.options.keyAttack.isDown()) return InteractionResult.PASS;
-            if (operationMode == OperationMode.ADD_SCREEN) {
-                for (Display.TextDisplay screen : screens) {
-                    if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
-                        return InteractionResult.FAIL;
+        if (!axiomLoaded) {
+            AttackBlockCallback.EVENT.register((player, level, interactionHand, blockPos, direction) -> {
+                if (!level.isClientSide() || !player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                    return InteractionResult.PASS;
+                Minecraft minecraft = Minecraft.getInstance();
+                if (!minecraft.options.keyAttack.isDown()) return InteractionResult.PASS;
+                if (operationMode == OperationMode.ADD_SCREEN) {
+                    for (Display.ItemDisplay screen : screens) {
+                        if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
+                            return InteractionResult.FAIL;
+                        }
+                    }
+                } else if (operationMode == OperationMode.REMOVE_SCREEN) {
+                    for (Display.ItemDisplay screen : screens) {
+                        if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
+                            return InteractionResult.FAIL;
+                        }
                     }
                 }
-            } else if (operationMode == OperationMode.REMOVE_SCREEN) {
-                for (Display.TextDisplay screen : screens) {
-                    if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
-                        return InteractionResult.FAIL;
-                    }
-                }
-            }
-            return InteractionResult.PASS;
-        });
+                return InteractionResult.PASS;
+            });
+        }
 
         ClientTickEvents.END_CLIENT_TICK.register(minecraft -> {
             if (minecraft.player == null) return;
-            if (minecraft.player.getPermissionLevel() < 2) return;
-            if (operationMode == OperationMode.ADD_SCREEN) {
-                var camera = minecraft.getCameraEntity();
-                if (camera == null) return;
-                screens = minecraft.level.getEntitiesOfClass(Display.TextDisplay.class, AABB.ofSize(camera.position(), 10f, 10f, 10f)).toArray(Display.TextDisplay[]::new);
-                if (minecraft.options.keyAttack.isDown()) {
-                    for (Display.TextDisplay screen : screens) {
-                        if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
-                            boolean success = PLAYBACK.SCREEN_META.addScreen(screen);
-                            addScreenMsg(minecraft, true, success);
+            if (!minecraft.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) return;
+            if (!axiomLoaded) {
+                if (operationMode == OperationMode.ADD_SCREEN) {
+                    var camera = minecraft.getCameraEntity();
+                    if (camera == null) return;
+                    screens = minecraft.level.getEntitiesOfClass(Display.ItemDisplay.class, AABB.ofSize(camera.position(), 10f, 10f, 10f)).toArray(Display.ItemDisplay[]::new);
+                    if (minecraft.options.keyAttack.isDown()) {
+                        for (Display.ItemDisplay screen : screens) {
+                            if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
+                                boolean success = PLAYBACK.SCREEN_META.addScreen(screen);
+                                addScreenMsg(minecraft, true, success);
+                            }
                         }
                     }
-                }
-            } else if (operationMode == OperationMode.REMOVE_SCREEN) {
-                screens = PLAYBACK.SCREEN_META.screens.toArray(Display.TextDisplay[]::new);
-                if (minecraft.options.keyAttack.isDown()) {
-                    for (Display.TextDisplay screen : screens) {
-                        if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
-                            boolean success = PLAYBACK.SCREEN_META.removeScreen(screen);
-                            addScreenMsg(minecraft, false, success);
+                } else if (operationMode == OperationMode.REMOVE_SCREEN) {
+                    screens = PLAYBACK.SCREEN_META.screens.toArray(Display.ItemDisplay[]::new);
+                    if (minecraft.options.keyAttack.isDown()) {
+                        for (Display.ItemDisplay screen : screens) {
+                            if (CameraUtil.isMouseOverPoint(screen.position(), minecraft.player.getEyePosition(), minecraft.player.getLookAngle(), 0.18)) {
+                                boolean success = PLAYBACK.SCREEN_META.removeScreen(screen);
+                                addScreenMsg(minecraft, false, success);
+                            }
                         }
                     }
+                } else {
+                    screens = null;
                 }
-            } else {
-                screens = null;
             }
             PLAYBACK.tick();
             if (axiomLoaded && !(minecraft.screen instanceof VideoPlayerScreen)) {
                 Display display = DisplayEntityManipulator.getActiveDisplayEntity();
                 switch (this.operationMode) {
                     case ADD_SCREEN -> {
-                        if (display instanceof Display.TextDisplay textDisplay && display != this.lastSelectedDisplay) {
-                            boolean added = addScreen(textDisplay);
+                        if (display instanceof Display.ItemDisplay itemDisplay && display != this.lastSelectedDisplay) {
+                            boolean added = addScreen(itemDisplay);
                             addScreenMsg(minecraft, true, added);
                         }
                     }
                     case REMOVE_SCREEN -> {
-                        if (display instanceof Display.TextDisplay textDisplay && display != this.lastSelectedDisplay) {
-                            boolean removed = removeScreen(textDisplay);
+                        if (display instanceof Display.ItemDisplay itemDisplay && display != this.lastSelectedDisplay) {
+                            boolean removed = removeScreen(itemDisplay);
                             addScreenMsg(minecraft, false, removed);
                         }
                     }
@@ -218,8 +231,8 @@ public class VideoPlayerClient implements ClientModInitializer {
         WorldRenderEvents.BEFORE_TRANSLUCENT.register(CustomRenderPipeline.INSTANCE::extractAndDrawWaypoint);
 
         ClientEntityEvents.ENTITY_UNLOAD.register((entity, clientLevel) -> {
-            if (!(entity instanceof Display.TextDisplay textDisplay)) return;
-            PLAYBACK.SCREEN_META.removeScreen(textDisplay);
+            if (!(entity instanceof Display.ItemDisplay display)) return;
+            PLAYBACK.SCREEN_META.removeScreen(display);
         });
     }
 
@@ -261,7 +274,7 @@ public class VideoPlayerClient implements ClientModInitializer {
     private LiteralArgumentBuilder<FabricClientCommandSource> getCommand() {
         return ClientCommandManager.literal("vidplay").then(
                 ClientCommandManager.literal("scale")
-                        .then(ClientCommandManager.argument("scale", FloatArgumentType.floatArg(0, 10)).executes(this::setScale))
+                        .then(ClientCommandManager.argument("scale", FloatArgumentType.floatArg(0, 1000)).executes(this::setScale))
         ).then(
                 ClientCommandManager.literal("subtitleDisplay")
                         .then(ClientCommandManager.argument("display", UuidArgument.uuid()).suggests(this::suggestTextDisplay).executes(this::setSubtitleUUID))

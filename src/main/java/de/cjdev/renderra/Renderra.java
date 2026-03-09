@@ -7,10 +7,8 @@ import de.cjdev.renderra.network.FastFrameManipulate;
 import de.cjdev.renderra.network.UpdateNBTPacket;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.network.ServerPlayerConnection;
 import net.minecraft.world.entity.Entity;
@@ -23,10 +21,6 @@ import java.util.function.Predicate;
 public class Renderra implements ModInitializer {
 
     public static final Logger LOGGER = LogUtils.getLogger();
-    public static final FontDescription.Resource FONT = new FontDescription.Resource(ResourceLocation.fromNamespaceAndPath("m", "p"));
-
-    public static final int COMPOUND_OFFLOAD_SIZE;
-    public static final int COMPOUND_PIXEL_SIZE;
 
     public static final File VIDEOS_FOLDER = new File("videoplayer");
     public static final String[] endings = {".mp4", ".mkv", ".mov", ".avi", ".flv", ".webm", ".ts", ".m2ts", ".ogv", ".wmv", ".gif", ".png", ".jpeg"};
@@ -54,11 +48,5 @@ public class Renderra implements ModInitializer {
                 connection.send(vanillaPacket);
             }
         }
-    }
-
-    static {
-        // Offload Calculation
-        COMPOUND_OFFLOAD_SIZE = 25 + 19; // Base Compound + Packet Base
-        COMPOUND_PIXEL_SIZE = 28; // One pixel with text "A"
     }
 }

@@ -5,11 +5,13 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
@@ -18,7 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record UpdateNBTPacket(List<Modified> modifiedList, CompoundTag merge) implements CustomPacketPayload {
-    public static final ResourceLocation IDENTIFIER = ResourceLocation.parse("renderra:update_nbt");
+    public static final Identifier IDENTIFIER = Identifier.parse("renderra:update_nbt");
     public static final CustomPacketPayload.Type<UpdateNBTPacket> PACKET_TYPE =
             new CustomPacketPayload.Type<>(IDENTIFIER);
 
@@ -43,6 +45,25 @@ public record UpdateNBTPacket(List<Modified> modifiedList, CompoundTag merge) im
                 byteBuf.writeVec3(pos);
             }
         }
+
+        public void writeAxiom(FriendlyByteBuf byteBuf) {
+            // UUID
+            byteBuf.writeUUID(uuid);
+            // Position Data
+            if (pos != null) {
+                // Relative Pack Rotation
+                byteBuf.writeByte(1 << 8);
+                // Position
+                byteBuf.writeDouble(pos.x);
+                byteBuf.writeDouble(pos.y);
+                byteBuf.writeDouble(pos.z);
+                // 0 Rotation
+                byteBuf.writeFloat(0);
+                byteBuf.writeFloat(0);
+            } else {
+                byteBuf.writeByte(-1);
+            }
+        }
     }
 
     @Override
@@ -58,7 +79,7 @@ public record UpdateNBTPacket(List<Modified> modifiedList, CompoundTag merge) im
     }
 
     public void handle(MinecraftServer minecraftServer, ServerPlayer serverPlayer) {
-        if (serverPlayer.getPermissionLevel() < 2) return;
+        if (!serverPlayer.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) return;
         ServerLevel level = serverPlayer.level();
         minecraftServer.execute(() -> {
             for (Modified modified : this.modifiedList) {

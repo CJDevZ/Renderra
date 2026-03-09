@@ -12,11 +12,14 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MappableRingBuffer;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.ShapeRenderer;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.system.MemoryUtil;
@@ -29,7 +32,7 @@ public class CustomRenderPipeline {
 
     // :::custom-pipelines:define-pipeline
     private static final RenderPipeline FILLED_THROUGH_WALLS = RenderPipelines.register(RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
-            .withLocation(ResourceLocation.fromNamespaceAndPath("renderra", "pipeline/debug_filled_box_through_walls"))
+            .withLocation(Identifier.fromNamespaceAndPath("renderra", "pipeline/debug_filled_box_through_walls"))
             .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLE_STRIP)
             .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
             .build()
@@ -42,11 +45,13 @@ public class CustomRenderPipeline {
     // :::custom-pipelines:extraction-phase
     // :::custom-pipelines:drawing-phase
     private static final Vector4f COLOR_MODULATOR = new Vector4f(1f, 1f, 1f, 1f);
+    private static final Vector3f MODEL_OFFSET = new Vector3f();
+    private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
     private MappableRingBuffer vertexBuffer;
 
     void extractAndDrawWaypoint(WorldRenderContext context) {
         if (VideoPlayerClient.screens == null) return;
-        for (Display.TextDisplay screen : VideoPlayerClient.screens) {
+        for (Display.ItemDisplay screen : VideoPlayerClient.screens) {
             renderWaypoint(context, screen.position());
             drawFilledThroughWalls(Minecraft.getInstance(), FILLED_THROUGH_WALLS);
         }
@@ -65,7 +70,7 @@ public class CustomRenderPipeline {
             buffer = new BufferBuilder(allocator, FILLED_THROUGH_WALLS.getVertexFormatMode(), FILLED_THROUGH_WALLS.getVertexFormat());
         }
 
-        ShapeRenderer.addChainedFilledBoxVertices(matrices, buffer, pos.x - 0.125, pos.y - 0.125, pos.z - 0.125, pos.x + 0.125, pos.y + 0.125, pos.z + 0.125, 1f, 0f, 1f, 0.5f);
+        ShapeRenderer.renderShape(matrices, buffer, Shapes.create(pos.x - 0.125, pos.y - 0.125, pos.z - 0.125, pos.x + 0.125, pos.y + 0.125, pos.z + 0.125), 0f, 0f, 0f, 0xFF00FF, 0.5f);
 
         matrices.popPose();
     }
@@ -125,7 +130,7 @@ public class CustomRenderPipeline {
 
         // Actually execute the draw
         GpuBufferSlice dynamicTransforms = RenderSystem.getDynamicUniforms()
-                .writeTransform(RenderSystem.getModelViewMatrix(), COLOR_MODULATOR, new Vector3f(), RenderSystem.getTextureMatrix(), 1f);
+                .writeTransform(RenderSystem.getModelViewMatrix(), COLOR_MODULATOR, MODEL_OFFSET, TEXTURE_MATRIX);
         try (RenderPass renderPass = RenderSystem.getDevice()
                 .createCommandEncoder()
                 .createRenderPass(() -> "renderra" + " example render pipeline rendering", client.getMainRenderTarget().getColorTextureView(), OptionalInt.empty(), client.getMainRenderTarget().getDepthTextureView(), OptionalDouble.empty())) {

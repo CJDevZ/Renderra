@@ -7,7 +7,7 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -16,7 +16,7 @@ import java.util.UUID;
 public record TextManipulatePacket(UUID uuid, Component text) implements AxiomServerboundPacket {
 
     @Override
-    public ResourceLocation id() {
+    public Identifier id() {
         return AxiomServerboundManipulateEntity.IDENTIFIER;
     }
 

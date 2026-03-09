@@ -106,6 +106,7 @@ public class ClientPlaybackHandler extends PlaybackHandler {
             CompoundTag compoundTag = compoundTags[length];
             if (compoundTag == null) continue;
 
+            //new AxiomServerboundManipulateEntity(List.of(new AxiomServerboundManipulateEntity.ManipulateEntry(screen, null, compoundTag)));
             new FrameManipulatePacket(screen, compoundTag).send();
         }
     }
@@ -117,21 +118,16 @@ public class ClientPlaybackHandler extends PlaybackHandler {
 
         int width = bufferedImage.getWidth();
         int height = bufferedImage.getHeight();
-        boolean pretty = SCREEN_META.pretty();
 
         int sectionHeight = Math.round(((float) height) / (screenCount));
         int pixelHeight = height - sectionHeight * (screenCount - 1);
         ClientPlayNetworking.send(new FastFrameManipulate(
                 SCREEN_META.getMainScreen().getId(),
-                this.colorMode,
-                pretty,
                 ImageIterable.parseImage(
-                        this.colorMode,
                         bufferedImage,
                         width,
                         height,
-                        height - pixelHeight,
-                        pretty
+                        height - pixelHeight
                 )
         ));
 
@@ -140,7 +136,7 @@ public class ClientPlaybackHandler extends PlaybackHandler {
         while (--length > 0) {
             int screen = ids[length];
             int curHeight = (screenCount - length - 1) * sectionHeight;
-            ClientPlayNetworking.send(new FastFrameManipulate(screen, this.colorMode, pretty, ImageIterable.parseImage(this.colorMode, bufferedImage, width, curHeight + sectionHeight, curHeight, pretty)));
+            ClientPlayNetworking.send(new FastFrameManipulate(screen, ImageIterable.parseImage(bufferedImage, width, curHeight + sectionHeight, curHeight)));
         }
     }
 }

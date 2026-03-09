@@ -9,7 +9,7 @@ import de.cjdev.renderra.subtitle.SRTLoader;
 import de.cjdev.renderra.subtitle.Subtitle;
 import net.minecraft.nbt.*;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.ProblemReporter;
@@ -60,7 +60,8 @@ public class PlaybackHandler {
     public float volume;
     public ReplayMode replayMode;
     public ColorMode colorMode;
-    public ResourceLocation audioResource;
+    public ScaleMode scaleMode;
+    public Identifier audioResource;
 
     public Level level;
     protected static Vec3 pos;
@@ -74,26 +75,25 @@ public class PlaybackHandler {
         VIDEO_META = VideoMetaData.None();
         volume = 1f;
         replayMode = ReplayMode.NORMAL;
-        colorMode = ColorMode.FIFTEEN_BIT;
-        audioResource = ResourceLocation.parse("renderra:part");
+        colorMode = ColorMode.FULL;
+        scaleMode = ScaleMode.BILINEAR;
+        audioResource = Identifier.parse("renderra:part");
         /// /// /// /// /// ///
-        ListTag POSITION = new ListTag();
-        POSITION.addAll(0, List.of(FloatTag.valueOf(-0.007f), FloatTag.valueOf(-0.013f), FloatTag.valueOf(0)));
+        ListTag SCALE = new ListTag();
+        FloatTag SCALAR = FloatTag.valueOf(screenMeta.scale());
+        SCALE.add(SCALAR);
+        SCALE.add(SCALAR);
+        SCALE.add(SCALAR);
 
         CompoundTag BRIGHTNESS_FIX = new CompoundTag();
         BRIGHTNESS_FIX.putInt("block", 15);
         BRIGHTNESS_FIX.putInt("sky", 0);
 
         CompoundTag TRANSFORMATION_FIX = new CompoundTag();
-        TRANSFORMATION_FIX.put("translation", POSITION);
-
-        CompoundTag TEXT_FIX = new CompoundTag();
-        TEXT_FIX.putString("font", "m:p");
-        TEXT_FIX.putString("text", "");
+        TRANSFORMATION_FIX.put("scale", SCALE);
 
         SCREEN_FIX = new CompoundTag();
         SCREEN_FIX.put("transformation", TRANSFORMATION_FIX);
-        SCREEN_FIX.put("text", TEXT_FIX);
         SCREEN_FIX.put("brightness", BRIGHTNESS_FIX);
     }
 
@@ -170,7 +170,7 @@ public class PlaybackHandler {
         long chunk = (GRAB.getTimestamp() / AudioSplitter.CHUNK_MICROS);
         if (chunk == lastAudioChunk) return;
 
-        Display.TextDisplay screen = SCREEN_META.getMainScreen();
+        Display.ItemDisplay screen = SCREEN_META.getMainScreen();
         if (volume != 0F) {
             playSound(screen, SoundEvent.createVariableRangeEvent(audioResource.withSuffix(String.format("%05x", chunk))), SoundSource.RECORDS, volume, 1f);
         }
@@ -211,35 +211,33 @@ public class PlaybackHandler {
         Entity entity = SCREEN_META.getMainScreen();
         if (entity == null) return VideoResult.NO_SCREENS;
         pos = entity.position();
-        ListTag SCALE = new ListTag();
         float scale = SCREEN_META.scale();
-        SCALE.add(FloatTag.valueOf(scale));
-        SCALE.add(FloatTag.valueOf(scale));
-        SCALE.add(FloatTag.valueOf(scale));
-        SCREEN_FIX.putInt("line_width", (SCREEN_META.pretty() ? 10 : 11) * SCREEN_META.width() + 1);
+        ListTag SCALE = new ListTag();
+        FloatTag SCALAR = FloatTag.valueOf(scale);
+        SCALE.add(SCALAR);
+        SCALE.add(SCALAR);
+        SCALE.add(SCALAR);
         SCREEN_FIX.getCompound("transformation").ifPresent(compoundTag ->
                 compoundTag.put("scale", SCALE));
         doEntityMerge(List.of(new UpdateNBTPacket.Modified(entity.getUUID(), null)), SCREEN_FIX);
-        int screenCount = SCREEN_META.screens.size();
-        int curScreen = screenCount - 1;
-        int screenHeight = SCREEN_META.height();
-        int sectionHeight = Math.round(((float) screenHeight) / (screenCount));
+        double heightPerScreen = SCREEN_META.heightPerScreen();
 
         UUID[] screenUUIDs = SCREEN_META.getScreenUUIDs();
-        if (screenUUIDs.length > 1) {
-            List<UpdateNBTPacket.Modified> modifiedList = new ArrayList<>(screenUUIDs.length - 1);
-            for (int i = 1; i < screenUUIDs.length; ++i) {
-                double offset = (screenHeight - (curScreen--) * sectionHeight) * 0.25d * scale;
+        int screenCount = screenUUIDs.length;
+        if (screenCount > 1) {
+            List<UpdateNBTPacket.Modified> modifiedList = new ArrayList<>(screenCount - 1);
+            for (int i = 1; i < screenCount; ++i) {
+                double offset = i * heightPerScreen * scale;
                 Vec3 position = pos.add(0, offset, 0);
                 modifiedList.add(new UpdateNBTPacket.Modified(screenUUIDs[i], position));
             }
 
-            updateTextDisplays(modifiedList, SCREEN_FIX);
+            updateDisplays(modifiedList, SCREEN_FIX);
         }
         return VideoResult.OK;
     }
 
-    public void updateTextDisplays(List<UpdateNBTPacket.Modified> modifiedList, CompoundTag merge) {
+    public void updateDisplays(List<UpdateNBTPacket.Modified> modifiedList, CompoundTag merge) {
         doEntityMerge(modifiedList, merge);
     }
 
@@ -394,9 +392,10 @@ public class PlaybackHandler {
         int height = SCREEN_META.height();
         BufferedImage resized = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = resized.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, this.scaleMode.getRenderingHint());
         g.drawImage(bufferedImage, 0, 0, width, height, null);
         g.dispose();
+
         return resized;
     }
 
@@ -438,60 +437,16 @@ public class PlaybackHandler {
     }
 
     private CompoundTag convertImageToComponents(final BufferedImage image, final int width, final int height, final int heightOffset) {
-        final boolean noSaving = this.SCREEN_META.pretty();
-        ListTag listTag = new ListTag();
-        StringBuilder curString = new StringBuilder();
-        boolean fifteen_bit = colorMode == ColorMode.FIFTEEN_BIT;
-        if (fifteen_bit) {
-            for (int y = heightOffset; y < height; ++y) {
-                for (int x = 0; x < width; ++x) {
-                    boolean endX = x == width - 1;
-                    int rgb = image.getRGB(x, y) & 0xFFFFFF;
+        int[] pixelArray = image.getRGB(0, heightOffset, width, height - heightOffset, null, 0, width);
 
-                    curString.append((char) (colorMode.getMappedColor(rgb) + 12832));
-                    if (noSaving && !endX) curString.append('.');
-                }
-            }
-
-            sectionToCompound(listTag, curString.toString(), -1);
-        } else {
-            int lastColor = -1;
-            for (int y = heightOffset; y < height; ++y) {
-                for (int x = 0; x < width; ++x) {
-                    int rgb = image.getRGB(x, y) & 0xFFFFFF;
-
-                    if (lastColor == -1) {
-                        // First pixel
-                        lastColor = rgb;
-                    }
-
-                    boolean endX = x == width - 1;
-
-                    if (rgb == lastColor) {
-                        curString.append("A");
-                        if (noSaving && !endX) curString.append('.');
-                    } else {
-                        // Color changed — save current segment
-                        sectionToCompound(listTag, curString.toString(), lastColor);
-
-                        curString.setLength(0); // Clear builder
-                        curString.append("A");
-                        if (noSaving && !endX) curString.append('.');
-                        lastColor = rgb;
-                    }
-                }
-            }
-
-            // Add last segment if not empty
-            if (!curString.isEmpty()) {
-                sectionToCompound(listTag, curString.toString(), lastColor);
-            }
-        }
-
-        CompoundTag screenCompound = new CompoundTag();
-        screenCompound.put("extra", listTag);
+        CompoundTag customModelData = new CompoundTag();
+        customModelData.put("colors", new IntArrayTag(pixelArray));
+        CompoundTag components = new CompoundTag();
+        components.put("minecraft:custom_model_data", customModelData);
+        CompoundTag itemTag = new CompoundTag();
+        itemTag.put("components", components);
         CompoundTag compoundTag = new CompoundTag();
-        compoundTag.put("text", screenCompound);
+        compoundTag.put("item", itemTag);
 
         return compoundTag;
     }
@@ -561,23 +516,22 @@ public class PlaybackHandler {
 
         int width = bufferedImage.getWidth();
         int height = bufferedImage.getHeight();
-        boolean pretty = SCREEN_META.pretty();
 
         int sectionHeight = Math.round(((float) height) / (screenCount));
         int pixelHeight = height - sectionHeight * (screenCount - 1);
-        Display.TextDisplay mainScreen = SCREEN_META.getMainScreen();
-        new FastFrameManipulate(mainScreen.getId(), this.colorMode, pretty, ImageIterable.parseImage(this.colorMode, bufferedImage, width, height, height - pixelHeight, pretty))
+        Display.ItemDisplay mainScreen = SCREEN_META.getMainScreen();
+        new FastFrameManipulate(mainScreen.getId(), ImageIterable.parseImage(bufferedImage, width, height, height - pixelHeight))
                 .sendBackDisplay(mainScreen);
 
         Integer[] ids = SCREEN_META.getScreenIDs();
-        Display.TextDisplay[] textDisplays = SCREEN_META.getScreens();
+        Display.ItemDisplay[] displays = SCREEN_META.getScreens();
         int length = ids.length;
         while (--length > 0) {
             int screen = ids[length];
             int curHeight = (screenCount - length - 1) * sectionHeight;
-            ImageIterable image = ImageIterable.parseImage(this.colorMode, bufferedImage, width, curHeight + sectionHeight, curHeight, pretty);
-            var fastFrameManipulate = new FastFrameManipulate(screen, this.colorMode, pretty, image);
-            fastFrameManipulate.sendBackDisplay(textDisplays[length]);
+            int[] image = ImageIterable.parseImage(bufferedImage, width, curHeight + sectionHeight, curHeight);
+            var fastFrameManipulate = new FastFrameManipulate(screen, image);
+            fastFrameManipulate.sendBackDisplay(displays[length]);
         }
     }
 
@@ -588,11 +542,11 @@ public class PlaybackHandler {
         }
     }
 
-    public static PlaybackHandler createPlaybackHandler(Display.TextDisplay[] textDisplays, int resolutionX, int resolutionY, float scale) {
+    public static PlaybackHandler createPlaybackHandler(Display.ItemDisplay[] displays, int resolutionX, int resolutionY, float scale) {
         PlaybackHandler playbackHandler = new PlaybackHandler();
 
         ScreenMetaData screenMeta = playbackHandler.SCREEN_META;
-        screenMeta.addScreens(textDisplays);
+        screenMeta.addScreens(displays);
         screenMeta.width(resolutionX);
         screenMeta.height(resolutionY);
         screenMeta.scale(scale);

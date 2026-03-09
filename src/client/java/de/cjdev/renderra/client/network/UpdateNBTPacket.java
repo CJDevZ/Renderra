@@ -4,28 +4,26 @@ import com.moulberry.axiom.packets.AxiomServerboundManipulateEntity;
 import com.moulberry.axiom.packets.AxiomServerboundPacket;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Relative;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
-import java.util.UUID;
 
 public record UpdateNBTPacket(List<de.cjdev.renderra.network.UpdateNBTPacket.Modified> modifiedList, CompoundTag nbt) implements AxiomServerboundPacket {
 
     @Override
-    public ResourceLocation id() {
+    public Identifier id() {
         return AxiomServerboundManipulateEntity.IDENTIFIER;
     }
 
     @Override
     public void write(FriendlyByteBuf friendlyByteBuf) {
+        friendlyByteBuf.writeVarInt(this.modifiedList.size());
         // Iterate
         for (de.cjdev.renderra.network.UpdateNBTPacket.Modified uuid : this.modifiedList) {
             // Modified
-            uuid.write(friendlyByteBuf);
+            uuid.writeAxiom(friendlyByteBuf);
             // NBT
             friendlyByteBuf.writeNbt(this.nbt);
             // No Passenger Manipulation

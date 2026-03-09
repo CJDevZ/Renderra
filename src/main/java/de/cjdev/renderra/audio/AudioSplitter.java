@@ -38,8 +38,7 @@ public class AudioSplitter {
                     if (recorder == null || (timestamp - startMicros) >= CHUNK_MICROS) {
                         if (recorder != null) {
                             recorder.flush();
-                            recorder.stop();
-                            recorder.release();
+                            recorder.close();
                         }
 
                         String outputFileName = "part" + String.format("%05x", part++) + ".ogg";
@@ -62,8 +61,7 @@ public class AudioSplitter {
         } finally {
             if (recorder != null) {
                 recorder.flush();
-                recorder.stop();
-                recorder.release();
+                recorder.close();
             }
             grabber.setTimestamp(startTimestamp);
         }

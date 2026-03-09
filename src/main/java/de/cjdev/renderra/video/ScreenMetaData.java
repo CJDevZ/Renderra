@@ -11,9 +11,9 @@ public class ScreenMetaData {
     public boolean dirty;
     private int width;
     private int height;
+    private double heightPerScreen;
     private float scale;
-    private boolean pretty;
-    public final LinkedHashSet<Display.TextDisplay> screens;
+    public final LinkedHashSet<Display.ItemDisplay> screens;
     public Display.TextDisplay subtitleScreen;
 
     public ScreenMetaData() {
@@ -21,7 +21,6 @@ public class ScreenMetaData {
         this.width = 16;
         this.height = 9;
         this.scale = 1F;
-        this.pretty = true;
     }
 
     public int width() {
@@ -44,6 +43,16 @@ public class ScreenMetaData {
         this.height = height;
     }
 
+    public double heightPerScreen() {
+        return this.heightPerScreen;
+    }
+
+    public void heightPerScreen(double heightPerScreen) {
+        if (heightPerScreen < 0) return;
+        if (this.heightPerScreen != heightPerScreen) this.dirty = true;
+        this.heightPerScreen = heightPerScreen;
+    }
+
     public float scale() {
         return this.scale;
     }
@@ -53,35 +62,26 @@ public class ScreenMetaData {
         this.scale = scale;
     }
 
-    public boolean pretty() {
-        return this.pretty;
-    }
-
-    public void pretty(boolean pretty) {
-        if (this.pretty != pretty) this.dirty = true;
-        this.pretty = pretty;
-    }
-
     public boolean invisible() {
         return this.height == 0 || this.width == 0;
     }
 
-    public boolean addScreen(Display.TextDisplay display) {
+    public boolean addScreen(Display.ItemDisplay display) {
         this.dirty = true;
         return screens.add(display);
     }
 
-    public void addScreens(Display.TextDisplay... displays) {
+    public void addScreens(Display.ItemDisplay... displays) {
         screens.addAll(Arrays.asList(displays));
     }
 
-    public boolean removeScreen(Display.TextDisplay display) {
+    public boolean removeScreen(Display.ItemDisplay display) {
         this.dirty = true;
         return screens.remove(display);
     }
 
-    public Display.TextDisplay[] getScreens() {
-        return screens.toArray(Display.TextDisplay[]::new);
+    public Display.ItemDisplay[] getScreens() {
+        return screens.toArray(Display.ItemDisplay[]::new);
     }
 
     public UUID[] getScreenUUIDs() {
@@ -92,7 +92,7 @@ public class ScreenMetaData {
         return screens.stream().map(Entity::getId).toArray(Integer[]::new);
     }
 
-    public Display.TextDisplay getMainScreen() {
+    public Display.ItemDisplay getMainScreen() {
         return screens.getFirst();
     }
 }

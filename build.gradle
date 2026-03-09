@@ -48,9 +48,9 @@ dependencies {
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:$fabric_version"
 
-    modCompileOnlyApi("maven.modrinth:axiom:TibxxJrx") {
+    modApi("maven.modrinth:axiom:M0Jr2ivY") {
         artifact {
-            url = uri("https://cdn.modrinth.com/data/N6n5dqoA/versions/TibxxJrx/Axiom-$axiom_version-for-MC1.21.10.jar")
+            url = uri("https://cdn.modrinth.com/data/N6n5dqoA/versions/M0Jr2ivY/Axiom-$axiom_version-for-MC1.21.11.jar")
         }
     }
 
@@ -76,7 +76,7 @@ dependencies {
 
 processResources {
     inputs.property "version", project.version
-    inputs.property "minecraft_version", project.min_minecraft_version
+    //inputs.property "minecraft_version", project.min_minecraft_version
     inputs.property "minecraft_version", project.minecraft_version
     inputs.property "loader_version", project.loader_version
     inputs.property "axiom_version", project.axiom_version
@@ -84,7 +84,7 @@ processResources {
 
     filesMatching("fabric.mod.json") {
         expand "version": project.version,
-                "min_minecraft_version": project.min_minecraft_version,
+                //"min_minecraft_version": project.min_minecraft_version,
                 "minecraft_version": project.minecraft_version,
                 "loader_version": project.loader_version,
                 "axiom_version": project.axiom_version
@@ -116,7 +116,7 @@ java {
 
 jar {
     from("LICENSE") {
-        rename { "${it}_${project.archivesBaseName}" }
+        rename { "${it}_${project.name}" }
     }
 }
 
@@ -124,7 +124,7 @@ jar {
 publishing {
     publications {
         create("mavenJava", MavenPublication) {
-            artifactId = project.archives_base_name
+            artifactId = project.name
             from components.java
         }
     }
