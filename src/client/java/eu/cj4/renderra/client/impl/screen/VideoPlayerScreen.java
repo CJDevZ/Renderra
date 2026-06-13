@@ -1,0 +1,276 @@
+package eu.cj4.renderra.client.impl.screen;
+
+import eu.cj4.renderra.api.video.VideoInfo;
+import eu.cj4.renderra.impl.Renderra;
+import eu.cj4.renderra.api.VideoResult;
+import eu.cj4.renderra.api.video.ColorFilter;
+import eu.cj4.renderra.api.video.ReplayMode;
+import eu.cj4.renderra.api.video.ScaleMode;
+import eu.cj4.renderra.client.impl.VideoPlayerClient;
+import eu.cj4.renderra.impl.video.PlaybackHandlerImpl;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.*;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.gui.narration.NarratableEntry;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.block.Rotation;
+import org.jspecify.annotations.NonNull;
+
+import java.util.List;
+import java.util.Objects;
+
+public class VideoPlayerScreen extends Screen {
+    private final Screen parent;
+    private final VideoPlayerClient videoPlayer;
+
+    private EditBox WIDTH_BOX;
+    private EditBox HEIGHT_BOX;
+    private EditBox HEIGHT_PER_DISPLAY_BOX;
+
+    private Boolean wasPlaying;
+
+    public VideoPlayerScreen(Screen parent, VideoPlayerClient videoPlayer) {
+        super(Component.literal("Video Player"));
+        this.parent = parent;
+        this.videoPlayer = videoPlayer;
+    }
+
+    public static void doToast(String content) {
+        SystemToast.add(Minecraft.getInstance().getToastManager(), SystemToast.SystemToastId.NARRATOR_TOGGLE, Component.literal("Video Player"), Component.literal(content));
+    }
+
+    @Override
+    protected void init() {
+        // Setup Edit Boxes
+        this.WIDTH_BOX = new EditBox(this.font, 40, this.height - 40 - 30, 50, 20, Component.literal("Width"));
+        this.HEIGHT_BOX = new EditBox(this.font, 100, this.height - 40 - 30, 50, 20, Component.literal("Height"));
+        this.HEIGHT_PER_DISPLAY_BOX = new EditBox(this.font, 100, this.height - 40 - 30 * 4, 50, 20, Component.literal("1 Display Height"));
+        this.WIDTH_BOX.setValue(String.valueOf(videoPlayer.PLAYBACK.SCREEN_HOLDER.width()));
+        this.HEIGHT_BOX.setValue(String.valueOf(videoPlayer.PLAYBACK.SCREEN_HOLDER.height()));
+        this.HEIGHT_PER_DISPLAY_BOX.setValue(String.valueOf(videoPlayer.PLAYBACK.SCREEN_HOLDER.heightPerScreen()));
+
+        var playButton = Button.builder(getPlayButtonText(), button1 -> {
+            if (this.videoPlayer.PLAYBACK.playing) {
+                this.videoPlayer.PLAYBACK.playing = false;
+            } else {
+                save();
+                VideoResult resumeVideo = this.videoPlayer.PLAYBACK.resumeVideo();
+                if (resumeVideo.canDisplay()) doToast(resumeVideo.toast());
+            }
+            button1.setMessage(getPlayButtonText());
+        }).bounds(40, this.height - 40, 20, 20).build();
+        this.addRenderableWidget(playButton);
+
+        var cycleLoopBtn = CycleButton.builder(o -> null, this.videoPlayer.PLAYBACK.replayMode)
+                .withValues(ReplayMode.VALUES)
+                .create(70, this.height - 40, 20, 20, null, (cycleButton, object) -> {
+                    this.videoPlayer.PLAYBACK.replayMode = object;
+                    cycleButton.setMessage(Component.literal("\uD83D\uDD01").withColor(object.buttonColor));
+                });
+        this.addRenderableWidget(cycleLoopBtn);
+        cycleLoopBtn.setMessage(Component.literal("\uD83D\uDD01").withColor(this.videoPlayer.PLAYBACK.replayMode.buttonColor));
+
+        this.addRenderableWidget(CycleButton.builder(o -> Component.literal(o.name()), this.videoPlayer.PLAYBACK.colorFilter)
+                .withValues(ColorFilter.VALUES)
+                .create(285, this.height - 40 - 30 * 3, 115, 20, Component.literal("Color"), (cycleButton, object) ->
+                        this.videoPlayer.PLAYBACK.colorFilter = object));
+
+        this.addRenderableWidget(CycleButton.builder(o -> Component.literal(o.name()), this.videoPlayer.PLAYBACK.SCREEN_HOLDER.screenMeta().scaleMode())
+                .withValues(ScaleMode.VALUES)
+                .create(285, this.height - 40 - 30 * 4, 115, 20, Component.literal("Scale"), (cycleButton, object) ->
+                        this.videoPlayer.PLAYBACK.SCREEN_HOLDER.updateScreenMeta(screenMeta -> screenMeta.setScaleMode(object))));
+
+        this.addRenderableWidget(this.HEIGHT_PER_DISPLAY_BOX);
+
+        //this.addRenderableWidget(new VideoSelectionDropDown(this.minecraft, 240, 100, 20, 20, 100));
+
+        this.addRenderableWidget(CycleButton.builder(Component::literal, this.videoPlayer.PLAYBACK.videoName)
+                .withValues(this.videoPlayer.getVideoNames())
+                .create(160, this.height - 40 - 30, 240, 20, Component.literal("Video"), (cycleButton, value) -> {
+                    this.videoPlayer.PLAYBACK.videoName = value;
+                    playButton.setMessage(getPlayButtonText());
+                }));
+
+        CycleButton<VideoPlayerClient.OperationMode> opButton = CycleButton.builder(o -> Component.literal(o.name()), this.videoPlayer.operationMode)
+                .withValues(VideoPlayerClient.OperationMode.VALUES)
+                .create(40, this.height - 40 - 90, 110, 20, Component.literal("OP"), (cycleButton, value) ->
+                        this.videoPlayer.operationMode = value);
+        this.addRenderableWidget(opButton);
+
+        this.addRenderableWidget(CycleButton.builder(rotation -> Component.literal(rotation.name()), this.videoPlayer.PLAYBACK.SCREEN_HOLDER.screenMeta().rotation())
+                .withValues(Rotation.values())
+                .create(40, this.height - 40 - 60, 110, 20, Component.literal("Rotation"), (cycleButton, value) ->
+                        this.videoPlayer.PLAYBACK.SCREEN_HOLDER.updateScreenMeta(screenMeta -> screenMeta.setRotation(value))));
+
+        this.addRenderableWidget(Button.builder(Component.literal("Gen Audio"), button1 -> {
+            var future = this.videoPlayer.PLAYBACK.generateAudio();
+            if (!future.isDone()) {
+                doToast("Generating Audio");
+            }
+            future.whenComplete((videoResult, error) -> {
+                if (error != null) {
+                    doToast("Failed Generating Audio");
+                    Renderra.LOGGER.warn("Failed Generating Audio", error);
+                }
+                if (videoResult.isOk()) {
+                    doToast("Generated Audio");
+                } else if (videoResult.canDisplay()) {
+                    doToast(videoResult.toast());
+                }
+            });
+        }).bounds(160, this.height - 40 - 60, 115, 20).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal("Sync Hz"), button1 -> {
+            VideoResult result = this.videoPlayer.PLAYBACK.syncHz();
+            if (result == VideoResult.OK) {
+                doToast("Synced Hz");
+            } else if (result.canDisplay()) doToast(result.toast());
+        }).bounds(285, this.height - 40 - 60, 115, 20).build());
+
+        this.addRenderableWidget(this.WIDTH_BOX);
+        this.addRenderableWidget(this.HEIGHT_BOX);
+
+        VideoInfo videoInfo = this.videoPlayer.PLAYBACK.VIDEO_INFO;
+        this.addRenderableWidget(new TimestampSliderButton(100, this.height - 40, 300, 20, this.videoPlayer.getTimestampComponent(), videoInfo == null ? 0 : ((double) this.videoPlayer.PLAYBACK.getTimestamp() / 1_000_000L) / ((double) videoInfo.secondsLength()), this));
+        this.addRenderableWidget(new VolumeSliderButton(160, this.height - 40 - 90, 115, 20, Component.literal("Volume: " + this.videoPlayer.PLAYBACK.volume), this.videoPlayer.PLAYBACK.volume / 2, this.videoPlayer.PLAYBACK));
+    }
+
+    public static class VolumeSliderButton extends AbstractSliderButton {
+
+        private final PlaybackHandlerImpl PLAYBACK;
+
+        public VolumeSliderButton(int i, int j, int k, int l, Component component, double d, PlaybackHandlerImpl PLAYBACK) {
+            super(i, j, k, l, component, d);
+            this.PLAYBACK = PLAYBACK;
+        }
+
+        @Override
+        protected void updateMessage() {
+            this.setMessage(Component.literal("Volume: " + Math.floor(this.value * 20) / 10));
+        }
+
+        @Override
+        protected void applyValue() {
+            PLAYBACK.volume = (float) Math.floor(this.value * 20) / 10;
+        }
+    }
+
+    public static class VideoSelectionDropDown extends ContainerObjectSelectionList<VideoSelectionDropDown.Entry> {
+
+        public VideoSelectionDropDown(Minecraft minecraft, int width, int height, int y, int itemHeight, int a) {
+            super(minecraft, width, height, y, itemHeight/*, a*/);
+            this.addEntry(new Entry(minecraft.font, "Test"));
+        }
+
+        public static class Entry extends ContainerObjectSelectionList.Entry<Entry> {
+            private final Font font;
+            private final String value;
+
+            private final List<? extends GuiEventListener> children;
+
+            public Entry(Font font, String value) {
+                this.font = font;
+                this.value = value;
+                this.children = List.of(Button.builder(Component.literal("ABC"), button -> {}).build());
+            }
+
+            @Override
+            public @NonNull List<? extends NarratableEntry> narratables() {
+                return List.of();
+            }
+
+            @Override
+            public @NonNull List<? extends GuiEventListener> children() {
+                return this.children;
+            }
+
+            @Override
+            public void extractContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float a) {
+                //graphics.drawString(this.font, value, mouseX + 4, mouseY + 6, 0xFFFFFF, false);
+            }
+        }
+    }
+
+    public static class TimestampSliderButton extends AbstractSliderButton {
+
+        private final VideoPlayerScreen videoPlayer;
+
+        public TimestampSliderButton(int i, int j, int k, int l, Component component, double d, VideoPlayerScreen videoPlayer) {
+            super(i, j, k, l, component, d);
+            this.videoPlayer = videoPlayer;
+        }
+
+        @Override
+        protected void updateMessage() {
+            this.setMessage(this.videoPlayer.videoPlayer.getTimestampComponent(this.value));
+        }
+
+        @Override
+        protected void applyValue() {
+
+        }
+
+        @Override
+        protected void onDrag(MouseButtonEvent mouseButtonEvent, double d, double e) {
+            if (this.videoPlayer.wasPlaying == null) {
+                this.videoPlayer.wasPlaying = this.videoPlayer.videoPlayer.PLAYBACK.playing;
+                this.videoPlayer.videoPlayer.PLAYBACK.playing = false;
+            }
+            super.onDrag(mouseButtonEvent, d, e);
+        }
+
+        @Override
+        public void onRelease(MouseButtonEvent mouseButtonEvent) {
+            applyTime();
+            if (videoPlayer.wasPlaying != null) {
+                this.videoPlayer.videoPlayer.PLAYBACK.playing = videoPlayer.wasPlaying;
+            }
+            super.onRelease(mouseButtonEvent);
+        }
+
+        @Override
+        public void onClick(MouseButtonEvent mouseButtonEvent, boolean bl) {
+            applyTime();
+            super.onClick(mouseButtonEvent, bl);
+        }
+
+        public void applyTime() {
+            VideoPlayerClient clientMod = this.videoPlayer.videoPlayer;
+            VideoInfo videoInfo = clientMod.PLAYBACK.VIDEO_INFO;
+            if (videoInfo == null) {
+                return;
+            }
+            long videoLength = videoInfo.secondsLength();
+            clientMod.PLAYBACK.setTimestampSeconds((long) (this.value * videoLength));
+        }
+    }
+
+    public Component getPlayButtonText() {
+        return Component.literal(this.videoPlayer.PLAYBACK.playing ? "⏸" :
+                Objects.equals(this.videoPlayer.PLAYBACK.videoName, this.videoPlayer.PLAYBACK.VIDEO_INFO.fileName()) ? "▶"
+                : "⏳");
+    }
+
+    public void save() {
+        try {
+            this.videoPlayer.PLAYBACK.SCREEN_HOLDER.width(Integer.parseUnsignedInt(WIDTH_BOX.getValue()));
+            this.videoPlayer.PLAYBACK.SCREEN_HOLDER.height(Integer.parseUnsignedInt(HEIGHT_BOX.getValue()));
+            this.videoPlayer.PLAYBACK.SCREEN_HOLDER.heightPerScreen(Double.parseDouble(HEIGHT_PER_DISPLAY_BOX.getValue()));
+        } catch (NumberFormatException ignored) {
+        }
+    }
+
+    @Override
+    public void onClose() {
+        if (this.wasPlaying != null) {
+            this.videoPlayer.PLAYBACK.playing = this.wasPlaying;
+        }
+        this.minecraft.setScreen(parent);
+        save();
+    }
+}

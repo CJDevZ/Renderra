@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "de.cjdev.renderra.client.mixin",
+  "package": "eu.cj4.renderra.client.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
     "GameRendererMixin",
@@ -8,6 +8,5 @@
   ],
   "injectors": {
     "defaultRequire": 1
-  },
-  "refmap": "client-Renderra-refmap.json"
+  }
 }

@@ -1,6 +1,6 @@
 {
   "required": true,
-  "package": "de.cjdev.renderra.mixin",
+  "package": "eu.cj4.renderra.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "MixinChunkMap",
@@ -8,6 +8,5 @@
   ],
   "injectors": {
     "defaultRequire": 1
-  },
-  "refmap": "renderra-refmap.json"
+  }
 }

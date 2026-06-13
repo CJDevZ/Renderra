@@ -13,10 +13,10 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "de.cjdev.renderra.Renderra"
+      "eu.cj4.renderra.impl.Renderra"
     ],
     "client": [
-      "de.cjdev.renderra.client.VideoPlayerClient"
+      "eu.cj4.renderra.client.impl.VideoPlayerClient"
     ]
   },
   "mixins": [
@@ -32,8 +32,8 @@
   "accessWidener": "renderra.accesswidener",
   "depends": {
     "fabricloader": ">=${loader_version}",
-    "fabric": "*",
-    "minecraft": ">=${minecraft_version}"
+    "fabric-api": "*",
+    "minecraft": "~${minecraft_version}"
   },
   "suggests": {
     "axiom": ">=${axiom_version}"
