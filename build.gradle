@@ -70,6 +70,8 @@ dependencies {
     include 'org.bytedeco:ffmpeg:7.1.1-1.5.12:macosx-x86_64@jar' // for macOS dylib
 
     // Polymer
+    implementation include("eu.pb4:polymer-core:$polymer_version")
+    implementation include("eu.pb4:polymer-resource-pack:$polymer_version")
     implementation include("eu.pb4:polymer-virtual-entity:$polymer_version")
 
     // JTransforms, for audio

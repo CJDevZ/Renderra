@@ -5,6 +5,7 @@ import eu.cj4.renderra.mixin.MixinChunkMap;
 import eu.cj4.renderra.mixin.MixinTrackedEntity;
 import eu.cj4.renderra.impl.network.FastFrameManipulate;
 import eu.cj4.renderra.impl.network.ServerboundUpdateNBTPacket;
+import eu.pb4.polymer.resourcepack.api.PolymerResourcePackUtils;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.protocol.Packet;
@@ -38,6 +39,8 @@ public class Renderra implements ModInitializer {
     public void onInitialize() {
         FastFrameManipulate.register();
         ServerboundUpdateNBTPacket.register();
+
+        PolymerResourcePackUtils.addModAssets("renderra");
     }
 
     public static void sendPacketToAllNear(Entity entity, Identifier customPayloadIdentifier, Packet<?> moddedPacket, Packet<?> vanillaPacket) {
